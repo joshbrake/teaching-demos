@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E79 Feedback Control: Depth Tracking</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628;
+    color: #e0e8f0;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-align: center;
+    padding: 18px 0 4px;
+    font-size: 1.6rem;
+    color: #7ec8f0;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6a8da8;
+    margin-bottom: 12px;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+  }
+
+  /* Panels */
+  .panel {
+    background: #111e30;
+    border: 1px solid #1e3450;
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #5a9cc0;
+    margin-bottom: 12px;
+  }
+
+  /* Controls panel */
+  .controls { grid-column: 1; grid-row: 1 / 3; }
+  .slider-group { margin-bottom: 18px; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: #8ab4d0;
+    margin-bottom: 6px;
+  }
+  .slider-group label span { color: #7ec8f0; font-weight: 600; font-family: 'Courier New', monospace; }
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e3450;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #4a9ece;
+    cursor: pointer;
+    border: 2px solid #7ec8f0;
+  }
+
+  /* Metrics */
+  .metrics { margin-top: 20px; }
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid #1a2a40;
+    font-size: 0.82rem;
+  }
+  .metric .label { color: #6a8da8; }
+  .metric .value { color: #7ec8f0; font-family: 'Courier New', monospace; font-weight: 600; }
+  .metric .value.warning { color: #f0a050; }
+  .metric .value.danger { color: #f06060; }
+
+  /* Animation canvas */
+  .sim-panel { grid-column: 2; grid-row: 1; min-height: 320px; position: relative; }
+  #simCanvas { width: 100%; height: 300px; border-radius: 6px; display: block; }
+
+  /* Response plot */
+  .plot-panel { grid-column: 2; grid-row: 2; }
+  #plotCanvas { width: 100%; height: 240px; border-radius: 6px; display: block; }
+
+  /* Pole-zero + info */
+  .pole-panel { grid-column: 3; grid-row: 1; }
+  #poleCanvas { width: 100%; height: 200px; border-radius: 6px; display: block; }
+
+  .info-panel { grid-column: 3; grid-row: 2; font-size: 0.78rem; line-height: 1.6; color: #6a8da8; }
+  .info-panel p { margin-bottom: 8px; }
+  .info-panel code { color: #7ec8f0; background: #1a2a40; padding: 1px 5px; border-radius: 3px; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid #2a4a6a;
+    border-radius: 6px;
+    background: #162840;
+    color: #7ec8f0;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #1e3a58; }
+  button.active { background: #2a5a80; border-color: #4a9ece; }
+
+  /* Regime badge */
+  .regime-badge {
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 14px;
+  }
+  .regime-badge.underdamped { background: #1a3050; color: #60c0f0; border: 1px solid #2a5a80; }
+  .regime-badge.critically { background: #2a3a20; color: #a0d060; border: 1px solid #4a6a30; }
+  .regime-badge.overdamped { background: #3a2a1a; color: #e0a040; border: 1px solid #6a5030; }
+
+  /* Bubbles */
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(120, 200, 255, 0.3);
+    background: rgba(120, 200, 255, 0.05);
+    pointer-events: none;
+  }
+
+  /* Equation display */
+  .equation-box {
+    background: #0d1a2a;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #8ab4d0;
+    text-align: center;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<h1>Proportional Feedback Control: Depth Tracking</h1>
+<p class="subtitle">Based on HMC E79 Practicum 5 &mdash; Underwater Robot Depth Control</p>
+
+<div class="container">
+  <!-- Controls -->
+  <div class="panel controls">
+    <h2>System Parameters</h2>
+
+    <div class="slider-group">
+      <label>Proportional Gain K<sub>p</sub> <span id="kpVal">2.00</span></label>
+      <input type="range" id="kpSlider" min="0.1" max="15" step="0.1" value="2.0">
+    </div>
+    <div class="slider-group">
+      <label>Mass m (kg) <span id="mVal">1.50</span></label>
+      <input type="range" id="mSlider" min="0.5" max="5" step="0.1" value="1.5">
+    </div>
+    <div class="slider-group">
+      <label>Drag coeff c (Ns/m) <span id="cVal">2.00</span></label>
+      <input type="range" id="cSlider" min="0.1" max="8" step="0.1" value="2.0">
+    </div>
+    <div class="slider-group">
+      <label>Target Depth z<sub>d</sub> (m) <span id="zdVal">1.00</span></label>
+      <input type="range" id="zdSlider" min="0.2" max="2.0" step="0.05" value="1.0">
+    </div>
+
+    <div class="btn-row">
+      <button id="resetBtn">Reset</button>
+      <button id="pauseBtn">Pause</button>
+    </div>
+
+    <div class="metrics">
+      <h2>Response Metrics</h2>
+      <div class="metric"><span class="label">&omega;<sub>n</sub> (rad/s)</span><span class="value" id="wnVal">--</span></div>
+      <div class="metric"><span class="label">&zeta; (damping)</span><span class="value" id="zetaVal">--</span></div>
+      <div class="metric"><span class="label">Overshoot M<sub>p</sub></span><span class="value" id="mpVal">--</span></div>
+      <div class="metric"><span class="label">Rise time t<sub>r</sub></span><span class="value" id="trVal">--</span></div>
+      <div class="metric"><span class="label">Settling time t<sub>s</sub></span><span class="value" id="tsVal">--</span></div>
+    </div>
+
+    <div id="regimeBadge" class="regime-badge underdamped">Underdamped</div>
+
+    <div class="equation-box">
+      m&middot;z&quot; + c&middot;z' + K<sub>p</sub>&middot;z = K<sub>p</sub>&middot;z<sub>d</sub><br>
+      &omega;<sub>n</sub> = &radic;(K<sub>p</sub>/m) &emsp; &zeta; = c/(2&radic;(m&middot;K<sub>p</sub>))
+    </div>
+  </div>
+
+  <!-- Simulation -->
+  <div class="panel sim-panel">
+    <h2>Underwater Robot Simulation</h2>
+    <canvas id="simCanvas"></canvas>
+  </div>
+
+  <!-- Step response plot -->
+  <div class="panel plot-panel">
+    <h2>Step Response z(t)</h2>
+    <canvas id="plotCanvas"></canvas>
+  </div>
+
+  <!-- Pole-zero map -->
+  <div class="panel pole-panel">
+    <h2>Pole Locations (s-plane)</h2>
+    <canvas id="poleCanvas"></canvas>
+  </div>
+
+  <!-- Info -->
+  <div class="panel info-panel">
+    <h2>How It Works</h2>
+    <p>The robot uses <strong>proportional control</strong>: thrust = <code>K<sub>p</sub>(z<sub>d</sub> - z)</code></p>
+    <p>This creates a <strong>2nd-order system</strong>. Increasing <code>K<sub>p</sub></code> speeds up response but may cause oscillation.</p>
+    <p>The <strong>damping ratio &zeta;</strong> determines behavior: &zeta; &lt; 1 oscillates, &zeta; = 1 is critically damped, &zeta; &gt; 1 is sluggish.</p>
+    <p><strong>Try it:</strong> Find the K<sub>p</sub> that gives the fastest response with &lt; 20% overshoot!</p>
+  </div>
+</div>
+
+<script>
+// ── System state ──
+let Kp = 2.0, m = 1.5, c = 2.0, zd = 1.0;
+let z = 0, v = 0, t = 0;
+let history = [];
+let paused = false;
+let bubbles = [];
+const dt = 0.005;         // physics timestep
+const stepsPerFrame = 4;  // sub-steps per animation frame
+const maxTime = 12;       // seconds of history to show
+
+// ── DOM refs ──
+const kpSlider = document.getElementById('kpSlider');
+const mSlider  = document.getElementById('mSlider');
+const cSlider  = document.getElementById('cSlider');
+const zdSlider = document.getElementById('zdSlider');
+
+const simCanvas  = document.getElementById('simCanvas');
+const plotCanvas = document.getElementById('plotCanvas');
+const poleCanvas = document.getElementById('poleCanvas');
+
+const simCtx  = simCanvas.getContext('2d');
+const plotCtx = plotCanvas.getContext('2d');
+const poleCtx = poleCanvas.getContext('2d');
+
+// ── Resize canvases ──
+function resize() {
+  [simCanvas, plotCanvas, poleCanvas].forEach(c => {
+    c.width  = c.clientWidth * devicePixelRatio;
+    c.height = c.clientHeight * devicePixelRatio;
+    c.getContext('2d').setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  });
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Slider handlers ──
+function readSliders() {
+  Kp = parseFloat(kpSlider.value);
+  m  = parseFloat(mSlider.value);
+  c  = parseFloat(cSlider.value);
+  zd = parseFloat(zdSlider.value);
+  document.getElementById('kpVal').textContent = Kp.toFixed(2);
+  document.getElementById('mVal').textContent  = m.toFixed(2);
+  document.getElementById('cVal').textContent  = c.toFixed(2);
+  document.getElementById('zdVal').textContent = zd.toFixed(2);
+  updateMetrics();
+}
+[kpSlider, mSlider, cSlider, zdSlider].forEach(s => s.addEventListener('input', readSliders));
+
+function resetSim() {
+  z = 0; v = 0; t = 0;
+  history = [];
+  bubbles = [];
+}
+document.getElementById('resetBtn').addEventListener('click', resetSim);
+document.getElementById('pauseBtn').addEventListener('click', function() {
+  paused = !paused;
+  this.textContent = paused ? 'Play' : 'Pause';
+  this.classList.toggle('active', paused);
+});
+
+// ── Compute metrics ──
+function updateMetrics() {
+  const wn   = Math.sqrt(Kp / m);
+  const zeta = c / (2 * Math.sqrt(m * Kp));
+
+  document.getElementById('wnVal').textContent = wn.toFixed(3);
+
+  const zetaEl = document.getElementById('zetaVal');
+  zetaEl.textContent = zeta.toFixed(3);
+  zetaEl.className = 'value' + (zeta < 0.3 ? ' danger' : zeta < 0.7 ? ' warning' : '');
+
+  const badge = document.getElementById('regimeBadge');
+  if (zeta < 0.98) {
+    badge.textContent = `Underdamped (\u03b6 = ${zeta.toFixed(2)})`;
+    badge.className = 'regime-badge underdamped';
+  } else if (zeta <= 1.02) {
+    badge.textContent = `Critically Damped (\u03b6 \u2248 1)`;
+    badge.className = 'regime-badge critically';
+  } else {
+    badge.textContent = `Overdamped (\u03b6 = ${zeta.toFixed(2)})`;
+    badge.className = 'regime-badge overdamped';
+  }
+
+  if (zeta < 1) {
+    const Mp = Math.exp(-Math.PI * zeta / Math.sqrt(1 - zeta * zeta)) * 100;
+    const wd = wn * Math.sqrt(1 - zeta * zeta);
+    const tr = (Math.PI - Math.atan2(Math.sqrt(1 - zeta * zeta), -zeta)) / wd;
+    const ts = 4 / (zeta * wn);
+    const mpEl = document.getElementById('mpVal');
+    mpEl.textContent = Mp.toFixed(1) + '%';
+    mpEl.className = 'value' + (Mp > 20 ? ' danger' : Mp > 10 ? ' warning' : '');
+    document.getElementById('trVal').textContent = tr.toFixed(3) + ' s';
+    document.getElementById('tsVal').textContent = ts.toFixed(2) + ' s';
+  } else {
+    document.getElementById('mpVal').textContent = '0%';
+    document.getElementById('mpVal').className = 'value';
+    document.getElementById('trVal').textContent = '--';
+    document.getElementById('tsVal').textContent = (4 / (zeta * wn)).toFixed(2) + ' s';
+  }
+}
+
+// ── Physics step ──
+function step() {
+  const error = zd - z;
+  const thrust = Kp * error;
+  const drag = c * v;
+  const a = (thrust - drag) / m;
+  v += a * dt;
+  z += v * dt;
+  t += dt;
+  history.push({ t, z, zd });
+  if (history.length > maxTime / dt) history.shift();
+}
+
+// ── Draw simulation (underwater scene) ──
+function drawSim() {
+  const W = simCanvas.clientWidth, H = simCanvas.clientHeight;
+  const ctx = simCtx;
+  ctx.clearRect(0, 0, W, H);
+
+  // Water gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a2a4a');
+  grad.addColorStop(1, '#061420');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Water surface
+  ctx.strokeStyle = 'rgba(120,200,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = 0; x < W; x += 2) {
+    const y = 30 + Math.sin(x * 0.02 + t * 2) * 3 + Math.sin(x * 0.05 + t * 1.3) * 2;
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Depth scale
+  const maxDepth = 2.5;
+  const topY = 40, botY = H - 20;
+  const depthToY = d => topY + (d / maxDepth) * (botY - topY);
+
+  // Depth markers
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = '#3a6080';
+  ctx.textAlign = 'right';
+  for (let d = 0; d <= 2; d += 0.5) {
+    const y = depthToY(d);
+    ctx.fillText(d.toFixed(1) + 'm', 45, y + 4);
+    ctx.strokeStyle = '#1a3050';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 20, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Target depth line
+  const targetY = depthToY(zd);
+  ctx.strokeStyle = '#40a060';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath(); ctx.moveTo(50, targetY); ctx.lineTo(W - 20, targetY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#40a060';
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 12px Segoe UI';
+  ctx.fillText('TARGET', W - 75, targetY - 6);
+
+  // Robot
+  const robotY = depthToY(Math.max(0, z));
+  const robotX = W / 2;
+
+  // Thrust indicator
+  const error = zd - z;
+  const thrust = Kp * error;
+  const thrustLen = Math.min(Math.abs(thrust) * 8, 60);
+  if (Math.abs(thrust) > 0.05) {
+    ctx.strokeStyle = thrust > 0 ? 'rgba(80,180,255,0.5)' : 'rgba(255,120,80,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(robotX, robotY);
+    ctx.lineTo(robotX, robotY + (thrust > 0 ? -thrustLen : thrustLen));
+    ctx.stroke();
+    // Arrow
+    const dir = thrust > 0 ? -1 : 1;
+    const tipY = robotY + dir * thrustLen;
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.beginPath();
+    ctx.moveTo(robotX, tipY + dir * (-8));
+    ctx.lineTo(robotX - 5, tipY);
+    ctx.lineTo(robotX + 5, tipY);
+    ctx.fill();
+  }
+
+  // Bubbles
+  if (Math.abs(thrust) > 0.3 && Math.random() < 0.3) {
+    bubbles.push({
+      x: robotX + (Math.random() - 0.5) * 30,
+      y: robotY - 12,
+      r: 1 + Math.random() * 3,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -0.5 - Math.random() * 1.5,
+      life: 1
+    });
+  }
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    b.x += b.vx; b.y += b.vy; b.life -= 0.012;
+    if (b.life <= 0) { bubbles.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(120,200,255,${b.life * 0.5})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Robot body
+  ctx.save();
+  ctx.translate(robotX, robotY);
+
+  // Hull
+  ctx.fillStyle = '#d0a030';
+  ctx.strokeStyle = '#e0c060';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 28, 12, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Viewport
+  ctx.fillStyle = '#2060a0';
+  ctx.strokeStyle = '#80c0f0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(8, -2, 6, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // Propeller
+  const propAngle = t * 15 * (thrust > 0 ? 1 : -1);
+  ctx.save();
+  ctx.translate(-28, 0);
+  ctx.rotate(propAngle);
+  ctx.fillStyle = '#a08020';
+  for (let i = 0; i < 3; i++) {
+    ctx.save();
+    ctx.rotate(i * Math.PI * 2 / 3);
+    ctx.fillRect(-1, -1, 2, 9);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  ctx.restore();
+
+  // Current depth label
+  ctx.fillStyle = '#e0e8f0';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(`z = ${z.toFixed(3)} m`, robotX + 40, robotY + 4);
+}
+
+// ── Draw step response plot ──
+function drawPlot() {
+  const W = plotCanvas.clientWidth, H = plotCanvas.clientHeight;
+  const ctx = plotCtx;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  if (history.length < 2) return;
+
+  const pad = { l: 55, r: 20, t: 15, b: 30 };
+  const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+
+  // Axes
+  const tStart = history[0].t, tEnd = history[history.length - 1].t;
+  const tRange = Math.max(tEnd - tStart, 1);
+
+  // Find y range
+  let yMin = 0, yMax = Math.max(zd * 1.5, 0.5);
+  for (const p of history) {
+    if (p.z > yMax) yMax = p.z * 1.1;
+    if (p.z < yMin) yMin = p.z - 0.1;
+  }
+
+  const tToX = t => pad.l + ((t - tStart) / tRange) * pw;
+  const yToY = y => pad.t + ph - ((y - yMin) / (yMax - yMin)) * ph;
+
+  // Grid
+  ctx.strokeStyle = '#1a2a3a';
+  ctx.lineWidth = 1;
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#4a6a80';
+
+  // Time axis
+  ctx.textAlign = 'center';
+  const tStep = tRange > 8 ? 2 : 1;
+  for (let tt = Math.ceil(tStart); tt <= tEnd; tt += tStep) {
+    const x = tToX(tt);
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke();
+    ctx.fillText(tt.toFixed(0) + 's', x, H - pad.b + 14);
+  }
+
+  // Y axis
+  ctx.textAlign = 'right';
+  const yStep = yMax > 1.5 ? 0.5 : 0.25;
+  for (let yy = 0; yy <= yMax; yy += yStep) {
+    const y = yToY(yy);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillText(yy.toFixed(2), pad.l - 6, y + 4);
+  }
+
+  // Target line
+  const zdY = yToY(zd);
+  ctx.strokeStyle = '#40a060';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 3]);
+  ctx.beginPath(); ctx.moveTo(pad.l, zdY); ctx.lineTo(W - pad.r, zdY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 20% overshoot band
+  if (zd > 0) {
+    const os20 = yToY(zd * 1.2);
+    ctx.fillStyle = 'rgba(240, 80, 80, 0.08)';
+    ctx.fillRect(pad.l, os20, pw, zdY - os20);
+    ctx.strokeStyle = 'rgba(240, 80, 80, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, os20); ctx.lineTo(W - pad.r, os20); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(240, 80, 80, 0.5)';
+    ctx.font = '9px Segoe UI';
+    ctx.textAlign = 'left';
+    ctx.fillText('20% OS limit', pad.l + 4, os20 - 3);
+  }
+
+  // Response curve
+  ctx.strokeStyle = '#4ac0f0';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = 'rgba(74, 192, 240, 0.3)';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  for (let i = 0; i < history.length; i++) {
+    const x = tToX(history[i].t);
+    const y = yToY(history[i].z);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ── Draw pole-zero map ──
+function drawPoles() {
+  const W = poleCanvas.clientWidth, H = poleCanvas.clientHeight;
+  const ctx = poleCtx;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2 + 20, cy = H / 2;
+  const scale = 22;
+
+  // Axes
+  ctx.strokeStyle = '#1a3050';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(10, cy); ctx.lineTo(W - 10, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, 10); ctx.lineTo(cx, H - 10); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#3a6080';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('Re', W - 18, cy - 6);
+  ctx.fillText('Im', cx + 14, 16);
+
+  // Grid circles
+  ctx.strokeStyle = '#12243a';
+  for (let r = 1; r <= 4; r++) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Compute poles
+  const wn = Math.sqrt(Kp / m);
+  const zeta = c / (2 * Math.sqrt(m * Kp));
+
+  let poles = [];
+  if (zeta < 1) {
+    const sigma = -zeta * wn;
+    const wd = wn * Math.sqrt(1 - zeta * zeta);
+    poles = [{ re: sigma, im: wd }, { re: sigma, im: -wd }];
+  } else if (Math.abs(zeta - 1) < 0.02) {
+    poles = [{ re: -wn, im: 0 }, { re: -wn, im: 0 }];
+  } else {
+    const s1 = -zeta * wn + wn * Math.sqrt(zeta * zeta - 1);
+    const s2 = -zeta * wn - wn * Math.sqrt(zeta * zeta - 1);
+    poles = [{ re: s1, im: 0 }, { re: s2, im: 0 }];
+  }
+
+  // Draw constant-zeta lines
+  if (zeta < 1) {
+    const angle = Math.acos(zeta);
+    ctx.strokeStyle = 'rgba(100, 180, 240, 0.15)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - 5 * scale * Math.cos(angle), cy - 5 * scale * Math.sin(angle)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - 5 * scale * Math.cos(angle), cy + 5 * scale * Math.sin(angle)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Draw poles
+  poles.forEach(p => {
+    const px = cx + p.re * scale;
+    const py = cy - p.im * scale;
+
+    ctx.strokeStyle = '#f04040';
+    ctx.lineWidth = 2.5;
+    const sz = 6;
+    ctx.beginPath(); ctx.moveTo(px - sz, py - sz); ctx.lineTo(px + sz, py + sz); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px + sz, py - sz); ctx.lineTo(px - sz, py + sz); ctx.stroke();
+  });
+
+  // Pole values text
+  ctx.fillStyle = '#6a8da8';
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'left';
+  if (zeta < 1) {
+    const sigma = (-zeta * wn).toFixed(2);
+    const wd = (wn * Math.sqrt(1 - zeta * zeta)).toFixed(2);
+    ctx.fillText(`${sigma} \u00b1 ${wd}j`, 8, H - 8);
+  } else {
+    poles.forEach((p, i) => {
+      ctx.fillText(`s${i + 1} = ${p.re.toFixed(2)}`, 8, H - 20 + i * 14);
+    });
+  }
+}
+
+// ── Main loop ──
+function loop() {
+  if (!paused) {
+    for (let i = 0; i < stepsPerFrame; i++) step();
+  }
+  drawSim();
+  drawPlot();
+  drawPoles();
+  requestAnimationFrame(loop);
+}
+
+readSliders();
+resetSim();
+loop();
+</script>
+</body>
+</html>
