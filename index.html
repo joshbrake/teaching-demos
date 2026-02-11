@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teaching Demos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; padding: 2rem; }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 0.3rem; }
+  .subtitle { color: #7d8590; margin-bottom: 2rem; font-size: 1.05rem; }
+  .demo-grid { display: grid; gap: 1rem; }
+  .demo-card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 1.5rem; text-decoration: none; color: inherit;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .demo-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
+  .demo-card h2 { font-size: 1.2rem; color: #58a6ff; margin-bottom: 0.4rem; }
+  .demo-card p { color: #7d8590; font-size: 0.95rem; line-height: 1.5; }
+  .tag { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px;
+         background: #1a3050; color: #58a6ff; margin-right: 6px; margin-bottom: 8px; }
+  .footer { margin-top: 3rem; color: #484f58; font-size: 0.85rem; text-align: center; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Teaching Demos</h1>
+  <p class="subtitle">Interactive visualizations for engineering and science education</p>
+  <div class="demo-grid">
+    <a class="demo-card" href="demos/feedback-control/">
+      <div>
+        <span class="tag">Controls</span>
+        <span class="tag">2nd Order Systems</span>
+        <span class="tag">Interactive</span>
+      </div>
+      <h2>Feedback Control: Depth Tracking</h2>
+      <p>Proportional control of an underwater robot. Adjust gain, mass, and drag to explore overshoot, damping, and rise time. Based on HMC E79.</p>
+    </a>
+    <a class="demo-card" href="demos/two-body-orbit/">
+      <div>
+        <span class="tag">Mechanics</span>
+        <span class="tag">Gravity</span>
+        <span class="tag">Kepler's Laws</span>
+      </div>
+      <h2>Two-Body Orbits: Newtonian Gravity</h2>
+      <p>Two masses orbiting their common center of mass. Adjust masses, semi-major axis, and eccentricity to explore Kepler's laws and orbital mechanics.</p>
+    </a>
+  </div>
+  <p class="footer">
+    Built for workshops with <a href="https://claude.ai/claude-code">Claude Code</a>.
+    Each demo is a single HTML file &mdash; <a href="https://github.com/joshbrake/teaching-demos">view source on GitHub</a>.
+  </p>
+</div>
+</body>
+</html>

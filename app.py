@@ -70,6 +70,12 @@ DEMOS = [
         "description": "Proportional control of an underwater robot. Adjust gain, mass, and drag to explore overshoot, damping, and rise time. Based on HMC E79.",
         "tags": ["Controls", "2nd Order Systems", "Interactive"],
     },
+    {
+        "slug": "two-body-orbit",
+        "title": "Two-Body Orbits: Newtonian Gravity",
+        "description": "Two masses orbiting their common center of mass. Adjust masses, semi-major axis, and eccentricity to explore Kepler's laws and orbital mechanics.",
+        "tags": ["Mechanics", "Gravity", "Kepler's Laws"],
+    },
 ]
 
 

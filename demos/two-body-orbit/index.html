@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two-Body Orbit — Newtonian Gravity</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a14;
+    color: #d0d8e8;
+    overflow-x: hidden;
+  }
+  h1 { text-align: center; padding: 16px 0 2px; font-size: 1.5rem; color: #90b8e0; }
+  .subtitle { text-align: center; font-size: 0.82rem; color: #506878; margin-bottom: 10px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 260px;
+    gap: 12px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 14px 14px;
+  }
+
+  .panel {
+    background: #10141e;
+    border: 1px solid #1a2438;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: #4a7a9a;
+    margin-bottom: 10px;
+  }
+
+  /* Sliders */
+  .slider-group { margin-bottom: 14px; }
+  .slider-group label {
+    display: flex; justify-content: space-between;
+    font-size: 0.8rem; color: #708898; margin-bottom: 4px;
+  }
+  .slider-group label span {
+    color: #90c0e8; font-weight: 600; font-family: 'Courier New', monospace;
+  }
+  input[type="range"] {
+    width: 100%; -webkit-appearance: none; height: 5px;
+    border-radius: 3px; background: #1a2438; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #3a80b0; cursor: pointer; border: 2px solid #60a8d8;
+  }
+
+  /* Metrics */
+  .metric {
+    display: flex; justify-content: space-between;
+    padding: 5px 0; border-bottom: 1px solid #141c2a; font-size: 0.78rem;
+  }
+  .metric .lbl { color: #506878; }
+  .metric .val { color: #80b8e0; font-family: 'Courier New', monospace; font-weight: 600; }
+
+  /* Canvas */
+  .canvas-panel { grid-row: 1 / 3; }
+  #orbitCanvas { width: 100%; height: 620px; display: block; border-radius: 6px; }
+
+  /* Controls column */
+  .left-col { display: flex; flex-direction: column; gap: 12px; }
+  .right-col { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 6px; margin-top: 8px; }
+  button {
+    flex: 1; padding: 7px 10px; border: 1px solid #1e3048;
+    border-radius: 6px; background: #121c2a; color: #70a0c0;
+    font-size: 0.78rem; cursor: pointer; transition: background 0.2s;
+  }
+  button:hover { background: #1a2840; }
+  button.active { background: #1e3860; border-color: #3a80b0; }
+
+  /* Color indicators */
+  .body-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .dot-1 { background: #f0a050; }
+  .dot-2 { background: #50a0f0; }
+
+  /* Info panel */
+  .info { font-size: 0.76rem; line-height: 1.6; color: #506878; }
+  .info p { margin-bottom: 6px; }
+  .info code { color: #80b8e0; background: #141c2a; padding: 1px 4px; border-radius: 3px; }
+
+  /* Speed control */
+  .speed-row {
+    display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.78rem; color: #506878;
+  }
+  .speed-row span { color: #80b8e0; font-family: 'Courier New', monospace; min-width: 32px; }
+</style>
+</head>
+<body>
+
+<h1>Two-Body Orbits: Newtonian Gravity</h1>
+<p class="subtitle">Elliptical orbits around the common center of mass</p>
+
+<div class="layout">
+  <!-- Left: controls -->
+  <div class="left-col">
+    <div class="panel">
+      <h2>Parameters</h2>
+
+      <div class="body-label"><span class="dot dot-1"></span> Body 1</div>
+      <div class="slider-group">
+        <label>Mass m<sub>1</sub> <span id="m1Val">3.0</span> M</label>
+        <input type="range" id="m1Slider" min="0.5" max="10" step="0.1" value="3.0">
+      </div>
+
+      <div class="body-label"><span class="dot dot-2"></span> Body 2</div>
+      <div class="slider-group">
+        <label>Mass m<sub>2</sub> <span id="m2Val">1.0</span> M</label>
+        <input type="range" id="m2Slider" min="0.5" max="10" step="0.1" value="1.0">
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #1a2438; margin: 10px 0;">
+
+      <div class="slider-group">
+        <label>Semi-major axis a <span id="aVal">5.0</span> AU</label>
+        <input type="range" id="aSlider" min="1" max="12" step="0.1" value="5.0">
+      </div>
+
+      <div class="slider-group">
+        <label>Eccentricity e <span id="eVal">0.40</span></label>
+        <input type="range" id="eSlider" min="0" max="0.95" step="0.01" value="0.40">
+      </div>
+
+      <div class="speed-row">
+        Speed:
+        <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1.0" style="flex:1;">
+        <span id="speedVal">1.0</span>x
+      </div>
+
+      <div class="btn-row">
+        <button id="resetBtn">Reset</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="trailBtn" class="active">Trails</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Orbital Elements</h2>
+      <div class="metric"><span class="lbl">a<sub>1</sub> (body 1)</span><span class="val" id="a1Val">--</span></div>
+      <div class="metric"><span class="lbl">a<sub>2</sub> (body 2)</span><span class="val" id="a2Val">--</span></div>
+      <div class="metric"><span class="lbl">Period T</span><span class="val" id="periodVal">--</span></div>
+      <div class="metric"><span class="lbl">Mass ratio m<sub>2</sub>/m<sub>1</sub></span><span class="val" id="ratioVal">--</span></div>
+    </div>
+  </div>
+
+  <!-- Center: orbit canvas -->
+  <div class="panel canvas-panel">
+    <canvas id="orbitCanvas"></canvas>
+  </div>
+
+  <!-- Right: live data + info -->
+  <div class="right-col">
+    <div class="panel">
+      <h2>Live State</h2>
+      <div class="metric"><span class="lbl">Time</span><span class="val" id="timeVal">0.00</span></div>
+      <div class="metric"><span class="lbl">Mean anomaly M</span><span class="val" id="meanAVal">--</span></div>
+      <div class="metric"><span class="lbl">True anomaly &nu;</span><span class="val" id="trueAVal">--</span></div>
+      <div class="metric"><span class="lbl">Separation r</span><span class="val" id="sepVal">--</span></div>
+      <div class="metric"><span class="lbl">|v<sub>1</sub>|</span><span class="val" id="v1Val">--</span></div>
+      <div class="metric"><span class="lbl">|v<sub>2</sub>|</span><span class="val" id="v2Val">--</span></div>
+      <div class="metric"><span class="lbl">KE</span><span class="val" id="keVal">--</span></div>
+      <div class="metric"><span class="lbl">PE</span><span class="val" id="peVal">--</span></div>
+      <div class="metric"><span class="lbl">Total E</span><span class="val" id="totalEVal">--</span></div>
+    </div>
+
+    <div class="panel info">
+      <h2>The Physics</h2>
+      <p>Two masses orbit their common <strong>center of mass</strong> (barycenter, shown as +).</p>
+      <p>Both orbits share the same <code>eccentricity</code> and <code>period</code>, but their semi-major axes differ:</p>
+      <p><code>a<sub>1</sub> = a &middot; m<sub>2</sub>/(m<sub>1</sub>+m<sub>2</sub>)</code></p>
+      <p><code>a<sub>2</sub> = a &middot; m<sub>1</sub>/(m<sub>1</sub>+m<sub>2</sub>)</code></p>
+      <p>The heavier body stays closer to the barycenter. Set <code>m<sub>1</sub> &gg; m<sub>2</sub></code> to recover the one-body limit.</p>
+      <p><strong>Try:</strong> Equal masses with high eccentricity. Watch them swing through periapsis together!</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Parameters ──
+let m1 = 3.0, m2 = 1.0, a_total = 5.0, ecc = 0.4;
+let simTime = 0, speed = 1.0;
+let paused = false, showTrails = true;
+const G = 1.0; // gravitational constant (natural units)
+
+// Trail buffers
+let trail1 = [], trail2 = [];
+const MAX_TRAIL = 2000;
+
+// ── Canvas ──
+const canvas = document.getElementById('orbitCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Sliders ──
+const sliders = {
+  m1: document.getElementById('m1Slider'),
+  m2: document.getElementById('m2Slider'),
+  a: document.getElementById('aSlider'),
+  e: document.getElementById('eSlider'),
+  speed: document.getElementById('speedSlider'),
+};
+
+function readSliders() {
+  m1 = parseFloat(sliders.m1.value);
+  m2 = parseFloat(sliders.m2.value);
+  a_total = parseFloat(sliders.a.value);
+  ecc = parseFloat(sliders.e.value);
+  speed = parseFloat(sliders.speed.value);
+
+  document.getElementById('m1Val').textContent = m1.toFixed(1);
+  document.getElementById('m2Val').textContent = m2.toFixed(1);
+  document.getElementById('aVal').textContent = a_total.toFixed(1);
+  document.getElementById('eVal').textContent = ecc.toFixed(2);
+  document.getElementById('speedVal').textContent = speed.toFixed(1);
+
+  updateOrbitalElements();
+}
+
+Object.values(sliders).forEach(s => s.addEventListener('input', readSliders));
+
+function updateOrbitalElements() {
+  const M = m1 + m2;
+  const a1 = a_total * m2 / M;
+  const a2 = a_total * m1 / M;
+  const T = 2 * Math.PI * Math.sqrt(a_total * a_total * a_total / (G * M));
+
+  document.getElementById('a1Val').textContent = a1.toFixed(3) + ' AU';
+  document.getElementById('a2Val').textContent = a2.toFixed(3) + ' AU';
+  document.getElementById('periodVal').textContent = T.toFixed(2) + ' yr';
+  document.getElementById('ratioVal').textContent = (m2 / m1).toFixed(3);
+}
+
+// ── Buttons ──
+document.getElementById('resetBtn').addEventListener('click', () => {
+  simTime = 0; trail1 = []; trail2 = [];
+});
+document.getElementById('pauseBtn').addEventListener('click', function () {
+  paused = !paused;
+  this.textContent = paused ? 'Play' : 'Pause';
+  this.classList.toggle('active', paused);
+});
+document.getElementById('trailBtn').addEventListener('click', function () {
+  showTrails = !showTrails;
+  this.classList.toggle('active', showTrails);
+  if (!showTrails) { trail1 = []; trail2 = []; }
+});
+
+// ── Kepler's equation solver ──
+function solveKepler(M_anom, e, tol = 1e-10) {
+  // Solve M = E - e sin(E) for E using Newton's method
+  let E = M_anom; // initial guess
+  for (let i = 0; i < 50; i++) {
+    const dE = (E - e * Math.sin(E) - M_anom) / (1 - e * Math.cos(E));
+    E -= dE;
+    if (Math.abs(dE) < tol) break;
+  }
+  return E;
+}
+
+// ── Compute positions and velocities ──
+function computeState(t) {
+  const M = m1 + m2;
+  const a = a_total;
+  const T = 2 * Math.PI * Math.sqrt(a * a * a / (G * M));
+  const n = 2 * Math.PI / T; // mean motion
+
+  // Mean anomaly
+  const M_anom = (n * t) % (2 * Math.PI);
+
+  // Eccentric anomaly
+  const E = solveKepler(M_anom, ecc);
+
+  // True anomaly
+  const cosNu = (Math.cos(E) - ecc) / (1 - ecc * Math.cos(E));
+  const sinNu = (Math.sqrt(1 - ecc * ecc) * Math.sin(E)) / (1 - ecc * Math.cos(E));
+  const nu = Math.atan2(sinNu, cosNu);
+
+  // Separation
+  const r = a * (1 - ecc * Math.cos(E));
+
+  // Relative position (body 2 relative to body 1... actually let's do relative to barycenter)
+  const x_rel = a * (Math.cos(E) - ecc);
+  const y_rel = a * Math.sqrt(1 - ecc * ecc) * Math.sin(E);
+
+  // Relative velocity
+  const E_dot = n / (1 - ecc * Math.cos(E));
+  const vx_rel = -a * Math.sin(E) * E_dot;
+  const vy_rel = a * Math.sqrt(1 - ecc * ecc) * Math.cos(E) * E_dot;
+
+  // Positions relative to barycenter
+  const f1 = -m2 / M; // body 1 fraction (opposite side)
+  const f2 = m1 / M;   // body 2 fraction
+
+  const x1 = f1 * x_rel, y1 = f1 * y_rel;
+  const x2 = f2 * x_rel, y2 = f2 * y_rel;
+
+  const vx1 = f1 * vx_rel, vy1 = f1 * vy_rel;
+  const vx2 = f2 * vx_rel, vy2 = f2 * vy_rel;
+
+  const v1 = Math.sqrt(vx1 * vx1 + vy1 * vy1);
+  const v2 = Math.sqrt(vx2 * vx2 + vy2 * vy2);
+
+  // Energies
+  const KE = 0.5 * m1 * v1 * v1 + 0.5 * m2 * v2 * v2;
+  const PE = -G * m1 * m2 / r;
+
+  return { x1, y1, x2, y2, v1, v2, r, M_anom, nu, E, KE, PE, T };
+}
+
+// ── Draw ──
+function draw() {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background with subtle star field
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (deterministic)
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 80; i++) {
+    const sx = ((i * 7919 + 1) % W);
+    const sy = ((i * 6271 + 3) % H);
+    const sr = ((i * 3) % 3 === 0) ? 1.2 : 0.6;
+    ctx.globalAlpha = 0.15 + ((i * 13) % 10) * 0.03;
+    ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Coordinate transform: center of canvas = barycenter
+  const cx = W / 2, cy = H / 2;
+  const maxExtent = a_total * (1 + ecc) * 1.15;
+  const scale = Math.min(W, H) * 0.42 / maxExtent;
+
+  const toScreenX = x => cx + x * scale;
+  const toScreenY = y => cy - y * scale; // flip y
+
+  const state = computeState(simTime);
+
+  // ── Draw orbit paths (full ellipses) ──
+  function drawEllipsePath(fraction, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= 360; i++) {
+      const E_i = (i / 360) * 2 * Math.PI;
+      const xr = a_total * (Math.cos(E_i) - ecc);
+      const yr = a_total * Math.sqrt(1 - ecc * ecc) * Math.sin(E_i);
+      const sx = toScreenX(fraction * xr);
+      const sy = toScreenY(fraction * yr);
+      i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  const M = m1 + m2;
+  drawEllipsePath(-m2 / M, 'rgba(240, 160, 80, 0.2)');
+  drawEllipsePath(m1 / M, 'rgba(80, 160, 240, 0.2)');
+
+  // ── Draw trails ──
+  if (showTrails) {
+    function drawTrail(trail, color) {
+      if (trail.length < 2) return;
+      for (let i = 1; i < trail.length; i++) {
+        const alpha = (i / trail.length) * 0.7;
+        ctx.strokeStyle = color.replace('ALPHA', alpha.toFixed(3));
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(toScreenX(trail[i - 1].x), toScreenY(trail[i - 1].y));
+        ctx.lineTo(toScreenX(trail[i].x), toScreenY(trail[i].y));
+        ctx.stroke();
+      }
+    }
+    drawTrail(trail1, 'rgba(240,160,80,ALPHA)');
+    drawTrail(trail2, 'rgba(80,160,240,ALPHA)');
+  }
+
+  // ── Barycenter ──
+  ctx.strokeStyle = '#404858';
+  ctx.lineWidth = 1;
+  const crossSize = 8;
+  ctx.beginPath(); ctx.moveTo(cx - crossSize, cy); ctx.lineTo(cx + crossSize, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy - crossSize); ctx.lineTo(cx, cy + crossSize); ctx.stroke();
+
+  // ── Line connecting bodies ──
+  ctx.strokeStyle = 'rgba(100,120,150,0.15)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(toScreenX(state.x1), toScreenY(state.y1));
+  ctx.lineTo(toScreenX(state.x2), toScreenY(state.y2));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Draw bodies ──
+  function drawBody(x, y, mass, color, glowColor) {
+    const sx = toScreenX(x), sy = toScreenY(y);
+    const radius = 4 + Math.sqrt(mass) * 3;
+
+    // Glow
+    const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius * 3);
+    grd.addColorStop(0, glowColor);
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(sx, sy, radius * 3, 0, Math.PI * 2); ctx.fill();
+
+    // Body
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(sx, sy, radius, 0, Math.PI * 2); ctx.fill();
+
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(sx - radius * 0.25, sy - radius * 0.25, radius * 0.4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  drawBody(state.x1, state.y1, m1, '#f0a050', 'rgba(240,160,80,0.15)');
+  drawBody(state.x2, state.y2, m2, '#50a0f0', 'rgba(80,160,240,0.15)');
+
+  // ── Velocity vectors ──
+  // (computed from state, drawn as small arrows)
+  const vScale = scale * 0.3;
+  function drawVelocity(x, y, state_obj, isBody1) {
+    const sx = toScreenX(x), sy = toScreenY(y);
+    const f = isBody1 ? -m2 / M : m1 / M;
+    const E = state_obj.E;
+    const n_motion = 2 * Math.PI / state_obj.T;
+    const E_dot = n_motion / (1 - ecc * Math.cos(E));
+    const vxr = -a_total * Math.sin(E) * E_dot;
+    const vyr = a_total * Math.sqrt(1 - ecc * ecc) * Math.cos(E) * E_dot;
+    const vx = f * vxr * vScale;
+    const vy = -f * vyr * vScale; // flip y
+
+    const color = isBody1 ? 'rgba(240,160,80,0.6)' : 'rgba(80,160,240,0.6)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + vx, sy + vy);
+    ctx.stroke();
+
+    // Arrowhead
+    const len = Math.sqrt(vx * vx + vy * vy);
+    if (len > 3) {
+      const ax = vx / len, ay = vy / len;
+      const px = -ay, py = ax;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(sx + vx, sy + vy);
+      ctx.lineTo(sx + vx - ax * 6 + px * 3, sy + vy - ay * 6 + py * 3);
+      ctx.lineTo(sx + vx - ax * 6 - px * 3, sy + vy - ay * 6 - py * 3);
+      ctx.fill();
+    }
+  }
+
+  drawVelocity(state.x1, state.y1, state, true);
+  drawVelocity(state.x2, state.y2, state, false);
+
+  // ── Scale bar ──
+  const barAU = 1;
+  const barPx = barAU * scale;
+  ctx.strokeStyle = '#2a3848';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(20, H - 20); ctx.lineTo(20 + barPx, H - 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(20, H - 25); ctx.lineTo(20, H - 15); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(20 + barPx, H - 25); ctx.lineTo(20 + barPx, H - 15); ctx.stroke();
+  ctx.fillStyle = '#3a4858';
+  ctx.font = '11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('1 AU', 20 + barPx / 2, H - 26);
+
+  // ── Update live metrics ──
+  document.getElementById('timeVal').textContent = simTime.toFixed(2) + ' yr';
+  document.getElementById('meanAVal').textContent = (state.M_anom * 180 / Math.PI).toFixed(1) + '\u00b0';
+  document.getElementById('trueAVal').textContent = (state.nu * 180 / Math.PI).toFixed(1) + '\u00b0';
+  document.getElementById('sepVal').textContent = state.r.toFixed(3) + ' AU';
+  document.getElementById('v1Val').textContent = state.v1.toFixed(3);
+  document.getElementById('v2Val').textContent = state.v2.toFixed(3);
+  document.getElementById('keVal').textContent = state.KE.toFixed(4);
+  document.getElementById('peVal').textContent = state.PE.toFixed(4);
+  document.getElementById('totalEVal').textContent = (state.KE + state.PE).toFixed(4);
+}
+
+// ── Main loop ──
+let lastTime = null;
+
+function loop(timestamp) {
+  if (lastTime === null) lastTime = timestamp;
+  const dt_real = (timestamp - lastTime) / 1000; // seconds of real time
+  lastTime = timestamp;
+
+  if (!paused) {
+    const M = m1 + m2;
+    const T = 2 * Math.PI * Math.sqrt(a_total ** 3 / (G * M));
+    // Map real time to sim time: one orbit in ~6 seconds at speed=1
+    const dt_sim = dt_real * speed * T / 6;
+    simTime += dt_sim;
+
+    // Record trail
+    const state = computeState(simTime);
+    trail1.push({ x: state.x1, y: state.y1 });
+    trail2.push({ x: state.x2, y: state.y2 });
+    if (trail1.length > MAX_TRAIL) trail1.shift();
+    if (trail2.length > MAX_TRAIL) trail2.shift();
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+readSliders();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
