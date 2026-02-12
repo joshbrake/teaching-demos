@@ -44,7 +44,7 @@ LANDING_PAGE = """
   <p class="subtitle">Interactive visualizations for engineering and science education</p>
   <div class="demo-grid">
     {% for demo in demos %}
-    <a class="demo-card" href="/demos/{{ demo.slug }}/">
+    <a class="demo-card" href="demos/{{ demo.slug }}/">
       <div>
         {% for tag in demo.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
       </div>
@@ -88,6 +88,11 @@ DEMOS = [
 @app.get("/")
 def index():
     return render_template_string(LANDING_PAGE, demos=DEMOS)
+
+
+@app.get("/demos/")
+def demos_index():
+    return send_from_directory(DEMOS_DIR, "index.html")
 
 
 @app.get("/demos/<path:filepath>")
