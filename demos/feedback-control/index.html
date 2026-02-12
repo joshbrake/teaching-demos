@@ -183,6 +183,38 @@
     text-align: center;
     line-height: 1.8;
   }
+
+  /* ── Responsive: tablet and below ── */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      max-width: 600px;
+    }
+    .controls { grid-column: 1; grid-row: auto; }
+    .sim-panel { grid-column: 1; grid-row: auto; min-height: 240px; }
+    .plot-panel { grid-column: 1; grid-row: auto; }
+    .pole-panel { grid-column: 1; grid-row: auto; }
+    .info-panel { grid-column: 1; grid-row: auto; }
+    #simCanvas { height: 260px; }
+    #plotCanvas { height: 220px; }
+    #poleCanvas { height: 180px; }
+  }
+
+  /* ── Responsive: phone ── */
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; padding: 12px 8px 4px; }
+    .subtitle { font-size: 0.8rem; margin-bottom: 8px; }
+    .container { padding: 0 8px 12px; gap: 8px; }
+    .panel { padding: 12px; }
+    #simCanvas { height: 200px; }
+    #plotCanvas { height: 180px; }
+    #poleCanvas { height: 160px; }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    button { padding: 12px; font-size: 0.85rem; min-height: 44px; }
+    .mode-toggle button { padding: 10px 6px; min-height: 44px; }
+  }
 </style>
 </head>
 <body>
