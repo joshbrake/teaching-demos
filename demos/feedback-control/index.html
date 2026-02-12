@@ -123,6 +123,30 @@
   }
   button:hover { background: #1e3a58; }
   button.active { background: #2a5a80; border-color: #4a9ece; }
+  button.go-btn { background: #1a4028; border-color: #2a6a3a; color: #60d080; font-weight: 600; font-size: 0.95rem; }
+  button.go-btn:hover { background: #245030; }
+  button.go-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex; border: 1px solid #1e3450; border-radius: 6px; overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .mode-toggle button {
+    flex: 1; border: none; border-radius: 0; padding: 8px 6px; font-size: 0.78rem;
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+  .mode-toggle button.active { background: #2a5a80; color: #b0e0ff; }
+
+  /* Settled badge */
+  .settled-badge {
+    text-align: center; padding: 8px; border-radius: 6px;
+    font-size: 0.85rem; font-weight: 600; margin-top: 8px;
+    display: none;
+  }
+  .settled-badge.running { display: block; background: #1a2a50; color: #60a0f0; border: 1px solid #2a4a80; }
+  .settled-badge.settled { display: block; background: #1a3a20; color: #60d080; border: 1px solid #2a6a3a; }
+  .settled-badge.waiting { display: block; background: #1a1a2a; color: #6a6a8a; border: 1px solid #2a2a40; }
 
   /* Regime badge */
   .regime-badge {
@@ -169,6 +193,12 @@
 <div class="container">
   <!-- Controls -->
   <div class="panel controls">
+    <h2>Mode</h2>
+    <div class="mode-toggle">
+      <button id="modeContinuous" class="active">Continuous</button>
+      <button id="modeSingleShot">Single Shot</button>
+    </div>
+
     <h2>System Parameters</h2>
 
     <div class="slider-group">
@@ -188,10 +218,27 @@
       <input type="range" id="zdSlider" min="0.2" max="2.0" step="0.05" value="1.0">
     </div>
 
-    <div class="btn-row">
+    <div id="icSection" style="display:none;">
+      <h2>Initial Conditions</h2>
+      <div class="slider-group">
+        <label>Initial depth z<sub>0</sub> (m) <span id="z0Val">0.00</span></label>
+        <input type="range" id="z0Slider" min="0" max="2.0" step="0.05" value="0.0">
+      </div>
+      <div class="slider-group">
+        <label>Initial velocity v<sub>0</sub> (m/s) <span id="v0Val">0.00</span></label>
+        <input type="range" id="v0Slider" min="-2.0" max="2.0" step="0.05" value="0.0">
+      </div>
+    </div>
+
+    <div id="continuousBtns" class="btn-row">
       <button id="resetBtn">Reset</button>
       <button id="pauseBtn">Pause</button>
     </div>
+    <div id="singleShotBtns" class="btn-row" style="display:none;">
+      <button id="goBtn" class="go-btn">Go</button>
+      <button id="resetSsBtn">Reset</button>
+    </div>
+    <div id="settledBadge" class="settled-badge waiting">Set parameters, then press Go</div>
 
     <div class="metrics">
       <h2>Response Metrics</h2>
@@ -242,18 +289,29 @@
 // ── System state ──
 let Kp = 2.0, m = 1.5, c = 2.0, zd = 1.0;
 let z = 0, v = 0, t = 0;
+let z0 = 0, v0 = 0; // initial conditions for single shot
 let history = [];
 let paused = false;
 let bubbles = [];
+let mode = 'continuous'; // 'continuous' or 'singleshot'
+let ssState = 'waiting'; // 'waiting', 'running', 'settled'
 const dt = 0.005;         // physics timestep
 const stepsPerFrame = 4;  // sub-steps per animation frame
 const maxTime = 12;       // seconds of history to show
+
+// Settling detection
+const SETTLE_TOL = 0.005;     // position tolerance (fraction of zd)
+const SETTLE_VEL_TOL = 0.005; // velocity tolerance
+const SETTLE_DURATION = 0.5;  // must stay settled for this many seconds
+let settleTimer = 0;
 
 // ── DOM refs ──
 const kpSlider = document.getElementById('kpSlider');
 const mSlider  = document.getElementById('mSlider');
 const cSlider  = document.getElementById('cSlider');
 const zdSlider = document.getElementById('zdSlider');
+const z0Slider = document.getElementById('z0Slider');
+const v0Slider = document.getElementById('v0Slider');
 
 const simCanvas  = document.getElementById('simCanvas');
 const plotCanvas = document.getElementById('plotCanvas');
@@ -274,25 +332,94 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// ── Mode switching ──
+const modeContinuousBtn = document.getElementById('modeContinuous');
+const modeSingleShotBtn = document.getElementById('modeSingleShot');
+const icSection = document.getElementById('icSection');
+const continuousBtns = document.getElementById('continuousBtns');
+const singleShotBtns = document.getElementById('singleShotBtns');
+const settledBadge = document.getElementById('settledBadge');
+const goBtn = document.getElementById('goBtn');
+
+function setMode(newMode) {
+  mode = newMode;
+  modeContinuousBtn.classList.toggle('active', mode === 'continuous');
+  modeSingleShotBtn.classList.toggle('active', mode === 'singleshot');
+  icSection.style.display = mode === 'singleshot' ? '' : 'none';
+  continuousBtns.style.display = mode === 'continuous' ? '' : 'none';
+  singleShotBtns.style.display = mode === 'singleshot' ? '' : 'none';
+  settledBadge.style.display = mode === 'singleshot' ? '' : 'none';
+
+  if (mode === 'continuous') {
+    paused = false;
+    document.getElementById('pauseBtn').textContent = 'Pause';
+    document.getElementById('pauseBtn').classList.remove('active');
+  } else {
+    ssState = 'waiting';
+    updateSettledBadge();
+    goBtn.disabled = false;
+  }
+  resetSim();
+}
+
+modeContinuousBtn.addEventListener('click', () => setMode('continuous'));
+modeSingleShotBtn.addEventListener('click', () => setMode('singleshot'));
+
+function updateSettledBadge() {
+  settledBadge.className = 'settled-badge ' + ssState;
+  if (ssState === 'waiting') settledBadge.textContent = 'Set parameters, then press Go';
+  else if (ssState === 'running') settledBadge.textContent = 'Running... t = ' + t.toFixed(2) + ' s';
+  else if (ssState === 'settled') settledBadge.textContent = 'Settled at t = ' + t.toFixed(2) + ' s';
+}
+
 // ── Slider handlers ──
 function readSliders() {
   Kp = parseFloat(kpSlider.value);
   m  = parseFloat(mSlider.value);
   c  = parseFloat(cSlider.value);
   zd = parseFloat(zdSlider.value);
+  z0 = parseFloat(z0Slider.value);
+  v0 = parseFloat(v0Slider.value);
   document.getElementById('kpVal').textContent = Kp.toFixed(2);
   document.getElementById('mVal').textContent  = m.toFixed(2);
   document.getElementById('cVal').textContent  = c.toFixed(2);
   document.getElementById('zdVal').textContent = zd.toFixed(2);
+  document.getElementById('z0Val').textContent = z0.toFixed(2);
+  document.getElementById('v0Val').textContent = v0.toFixed(2);
   updateMetrics();
 }
-[kpSlider, mSlider, cSlider, zdSlider].forEach(s => s.addEventListener('input', readSliders));
+[kpSlider, mSlider, cSlider, zdSlider, z0Slider, v0Slider].forEach(s => s.addEventListener('input', readSliders));
 
 function resetSim() {
-  z = 0; v = 0; t = 0;
+  if (mode === 'singleshot') {
+    z = z0; v = v0;
+  } else {
+    z = 0; v = 0;
+  }
+  t = 0;
   history = [];
   bubbles = [];
+  settleTimer = 0;
+  if (mode === 'singleshot') {
+    ssState = 'waiting';
+    goBtn.disabled = false;
+    updateSettledBadge();
+  }
 }
+
+// ── Go button (single shot) ──
+goBtn.addEventListener('click', function() {
+  z = z0; v = v0; t = 0;
+  history = [];
+  bubbles = [];
+  settleTimer = 0;
+  ssState = 'running';
+  goBtn.disabled = true;
+  updateSettledBadge();
+});
+
+document.getElementById('resetSsBtn').addEventListener('click', resetSim);
+
 document.getElementById('resetBtn').addEventListener('click', resetSim);
 document.getElementById('pauseBtn').addEventListener('click', function() {
   paused = !paused;
@@ -351,7 +478,29 @@ function step() {
   z += v * dt;
   t += dt;
   history.push({ t, z, zd });
-  if (history.length > maxTime / dt) history.shift();
+  if (mode === 'continuous') {
+    if (history.length > maxTime / dt) history.shift();
+  }
+
+  // Settling detection for single-shot mode
+  if (mode === 'singleshot' && ssState === 'running') {
+    const posErr = Math.abs(z - zd);
+    const tolAbs = Math.max(SETTLE_TOL * Math.abs(zd), 0.002);
+    if (posErr < tolAbs && Math.abs(v) < SETTLE_VEL_TOL) {
+      settleTimer += dt;
+      if (settleTimer >= SETTLE_DURATION) {
+        ssState = 'settled';
+        updateSettledBadge();
+      }
+    } else {
+      settleTimer = 0;
+    }
+    // Safety timeout at 30s
+    if (t > 30) {
+      ssState = 'settled';
+      updateSettledBadge();
+    }
+  }
 }
 
 // ── Draw simulation (underwater scene) ──
@@ -394,6 +543,20 @@ function drawSim() {
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 20, y); ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  // Initial depth line (single-shot mode)
+  if (mode === 'singleshot') {
+    const initY = depthToY(Math.max(0, z0));
+    ctx.strokeStyle = '#a08040';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(50, initY); ctx.lineTo(W - 20, initY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#a08040';
+    ctx.textAlign = 'left';
+    ctx.font = '11px Segoe UI';
+    ctx.fillText('z\u2080', W - 75, initY - 5);
   }
 
   // Target depth line
@@ -514,7 +677,12 @@ function drawPlot() {
   const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
 
   // Axes
-  const tStart = history[0].t, tEnd = history[history.length - 1].t;
+  const tStart = history[0].t;
+  let tEnd = history[history.length - 1].t;
+  // In single-shot mode, fix the time axis to the full run once settled
+  if (mode === 'singleshot' && ssState === 'settled') {
+    tEnd = history[history.length - 1].t;
+  }
   const tRange = Math.max(tEnd - tStart, 1);
 
   // Find y range
@@ -679,8 +847,19 @@ function drawPoles() {
 
 // ── Main loop ──
 function loop() {
-  if (!paused) {
-    for (let i = 0; i < stepsPerFrame; i++) step();
+  let shouldStep = false;
+  if (mode === 'continuous') {
+    shouldStep = !paused;
+  } else {
+    shouldStep = (ssState === 'running');
+    if (ssState === 'running') updateSettledBadge();
+  }
+
+  if (shouldStep) {
+    for (let i = 0; i < stepsPerFrame; i++) {
+      if (mode === 'singleshot' && ssState !== 'running') break;
+      step();
+    }
   }
   drawSim();
   drawPlot();
