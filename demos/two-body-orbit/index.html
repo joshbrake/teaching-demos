@@ -101,6 +101,29 @@
     display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.78rem; color: #506878;
   }
   .speed-row span { color: #80b8e0; font-family: 'Courier New', monospace; min-width: 32px; }
+
+  /* ── Responsive: tablet and below ── */
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+      max-width: 600px;
+    }
+    .canvas-panel { grid-row: auto; }
+    #orbitCanvas { height: 400px; }
+    .left-col, .right-col { gap: 8px; }
+  }
+
+  /* ── Responsive: phone ── */
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; padding: 12px 8px 2px; }
+    .subtitle { font-size: 0.78rem; margin-bottom: 8px; }
+    .layout { padding: 0 8px 12px; gap: 8px; }
+    .panel { padding: 10px; }
+    #orbitCanvas { height: 300px; }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    button { padding: 10px; font-size: 0.82rem; min-height: 44px; }
+  }
 </style>
 </head>
 <body>

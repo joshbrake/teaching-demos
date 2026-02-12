@@ -173,6 +173,32 @@
     box-shadow: 0 0 12px 3px rgba(80, 200, 120, 0.5);
     border-color: #50c878 !important;
   }
+
+  /* ── Responsive: tablet and below ── */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+      max-width: 600px;
+    }
+    #figureCanvas { height: 320px; }
+    .ae-summary-box { min-width: auto; max-width: 90vw; margin: 0 16px; }
+  }
+
+  /* ── Responsive: phone ── */
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; padding: 12px 8px 4px; }
+    .subtitle { font-size: 0.8rem; margin-bottom: 8px; }
+    .container { padding: 0 8px 12px; gap: 8px; }
+    .panel { padding: 12px; }
+    #figureCanvas { height: 260px; }
+    .ae-btn { padding: 12px 14px; min-height: 44px; }
+    .ae-nav-btn { width: 40px; height: 40px; }
+    .ae-picker { min-width: 0; left: 8px !important; right: 8px !important; max-width: calc(100vw - 16px); }
+    .ae-picker-item { padding: 10px 12px; min-height: 44px; }
+    .ae-summary-box { padding: 20px 16px; min-width: auto; max-width: 90vw; }
+    .center-controls { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>

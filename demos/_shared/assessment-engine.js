@@ -340,12 +340,23 @@ class AssessmentEngine {
     // Position near click but within viewport
     document.body.appendChild(el);
     const pw = el.offsetWidth, ph = el.offsetHeight;
-    let left = clientX + 12, top = clientY - 10;
-    if (left + pw > window.innerWidth - 10) left = clientX - pw - 12;
-    if (top + ph > window.innerHeight - 10) top = window.innerHeight - ph - 10;
-    if (top < 10) top = 10;
-    el.style.left = left + 'px';
-    el.style.top = top + 'px';
+    const isMobile = window.innerWidth <= 600;
+    if (isMobile) {
+      // On mobile, anchor picker at bottom of viewport, full width
+      el.style.left = '8px';
+      el.style.right = '8px';
+      el.style.bottom = '8px';
+      el.style.top = 'auto';
+      el.style.maxHeight = '60vh';
+      el.style.overflowY = 'auto';
+    } else {
+      let left = clientX + 12, top = clientY - 10;
+      if (left + pw > window.innerWidth - 10) left = clientX - pw - 12;
+      if (top + ph > window.innerHeight - 10) top = window.innerHeight - ph - 10;
+      if (top < 10) top = 10;
+      el.style.left = left + 'px';
+      el.style.top = top + 'px';
+    }
 
     this._pickerEl = el;
   }
