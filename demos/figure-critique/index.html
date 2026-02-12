@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure Critique: E80 Guidelines</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628;
+    color: #e0e8f0;
+    overflow-x: hidden;
+  }
+  h1 { text-align: center; padding: 18px 0 4px; font-size: 1.6rem; color: #7ec8f0; letter-spacing: 0.5px; }
+  .subtitle { text-align: center; font-size: 0.85rem; color: #6a8da8; margin-bottom: 12px; }
+
+  .container {
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    gap: 12px;
+    max-width: 1340px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+    align-items: start;
+  }
+  .panel {
+    background: #111e30;
+    border: 1px solid #1e3450;
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #5a9cc0;
+    margin-bottom: 12px;
+  }
+
+  /* Center column */
+  .center-col { display: flex; flex-direction: column; gap: 12px; }
+  #figureCanvas { width: 100%; height: 420px; border-radius: 6px; display: block; background: #fff; cursor: crosshair; }
+  .caption-area {
+    background: #111e30; border: 1px solid #1e3450; border-radius: 10px; padding: 14px 16px;
+    font-size: 0.88rem; line-height: 1.55; color: #c0ccd8;
+  }
+  .caption-area .caption-label { font-weight: 700; color: #e0e8f0; }
+  .caption-area .supporting-text { margin-top: 8px; color: #8a9ab0; font-size: 0.84rem; }
+  .center-controls { display: flex; gap: 10px; justify-content: center; }
+
+  /* ── Assessment Engine styles ── */
+  .ae-section { margin-bottom: 16px; }
+  .ae-section h2 {
+    font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #5a9cc0; margin-bottom: 10px;
+  }
+  .ae-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ae-nav-btn {
+    width: 32px; height: 32px; border: 1px solid #2a4a6a; border-radius: 6px;
+    background: #162840; color: #7ec8f0; font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ae-nav-btn:hover:not(:disabled) { background: #1e3a58; }
+  .ae-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .ae-nav-label { color: #8ab4d0; font-size: 0.9rem; font-weight: 600; }
+  .ae-challenge-title { color: #e0e8f0; font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+  .ae-difficulty { font-size: 0.82rem; color: #6a8da8; }
+  .ae-stars { color: #f0a050; letter-spacing: 2px; }
+
+  .ae-btn {
+    display: block; width: 100%; padding: 9px 14px; border: 1px solid #2a4a6a; border-radius: 6px;
+    background: #162840; color: #7ec8f0; font-size: 0.85rem; cursor: pointer; text-align: center;
+    transition: background 0.2s; margin-bottom: 6px;
+  }
+  .ae-btn:hover:not(:disabled) { background: #1e3a58; }
+  .ae-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ae-btn-primary { background: #1a4028; border-color: #2a6a3a; color: #60d080; font-weight: 600; }
+  .ae-btn-primary:hover { background: #245030; }
+  .ae-btn-subtle { background: transparent; border-color: #1e3450; color: #5a7a90; font-size: 0.78rem; }
+
+  .ae-hint-list { padding-left: 18px; font-size: 0.82rem; color: #8ab4d0; line-height: 1.6; }
+  .ae-hint-list li { margin-bottom: 4px; }
+  .ae-muted { font-size: 0.8rem; color: #5a7a90; line-height: 1.5; }
+
+  /* Rubric reference */
+  .ae-rubric-cat { margin-bottom: 6px; }
+  .ae-rubric-cat summary {
+    cursor: pointer; font-size: 0.84rem; color: #8ab4d0; padding: 4px 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ae-rubric-cat summary:hover { color: #a0d0f0; }
+  .ae-rubric-list { padding-left: 16px; font-size: 0.78rem; color: #6a8da8; line-height: 1.55; margin-top: 4px; }
+  .ae-rubric-list li { margin-bottom: 3px; }
+  .ae-rubric-list strong { color: #8ab4d0; }
+
+  .ae-picker-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; flex-shrink: 0;
+  }
+
+  .ae-count {
+    display: inline-block; background: #1e3450; color: #7ec8f0; font-size: 0.72rem;
+    padding: 1px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Findings */
+  .ae-finding {
+    display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px;
+    font-size: 0.82rem; color: #c0ccd8; margin-bottom: 4px; background: #162840;
+    position: relative;
+  }
+  .ae-finding-remove {
+    margin-left: auto; background: none; border: none; color: #5a7a90; cursor: pointer;
+    font-size: 0.9rem; padding: 0 4px;
+  }
+  .ae-finding-remove:hover { color: #f06060; }
+  .ae-finding-icon { font-weight: 700; font-size: 0.9rem; flex-shrink: 0; width: 18px; text-align: center; }
+  .ae-correct { background: #142a1e; }
+  .ae-correct .ae-finding-icon { color: #50c878; }
+  .ae-incorrect { background: #2a1418; }
+  .ae-incorrect .ae-finding-icon { color: #f06060; }
+  .ae-missed { background: #2a2010; }
+  .ae-missed .ae-finding-icon { color: #f0a050; }
+  .ae-missed-heading { font-size: 0.78rem; color: #f0a050; font-weight: 600; margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .ae-explanation { font-size: 0.75rem; color: #6a8da8; margin-top: 3px; width: 100%; }
+
+  /* Picker (floating menu) */
+  .ae-picker {
+    position: fixed; z-index: 1000; background: #111e30; border: 1px solid #2a4a6a;
+    border-radius: 8px; padding: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .ae-picker-heading { font-size: 0.78rem; color: #5a9cc0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding: 0 4px; }
+  .ae-picker-item {
+    display: flex; align-items: center; gap: 6px; width: 100%; padding: 7px 10px;
+    background: none; border: none; color: #c0ccd8; font-size: 0.84rem; cursor: pointer;
+    border-radius: 5px; text-align: left;
+  }
+  .ae-picker-item:hover:not(:disabled) { background: #1e3450; }
+  .ae-picker-item.ae-picker-used { opacity: 0.35; cursor: not-allowed; }
+  .ae-picker-dismiss { color: #5a7a90; margin-top: 4px; border-top: 1px solid #1e3450; padding-top: 8px; }
+
+  /* Summary overlay */
+  .ae-summary-overlay {
+    position: fixed; inset: 0; z-index: 2000; background: rgba(5,10,20,0.85);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ae-summary-box {
+    background: #111e30; border: 1px solid #2a4a6a; border-radius: 12px;
+    padding: 28px 32px; min-width: 360px; max-width: 500px;
+  }
+  .ae-summary-box h2 { font-size: 1.1rem; color: #7ec8f0; margin-bottom: 16px; text-transform: none; letter-spacing: 0; }
+  .ae-summary-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+    margin-bottom: 4px; font-size: 0.88rem;
+  }
+  .ae-sum-done { background: #142a1e; color: #60d080; }
+  .ae-sum-done span:first-child { color: #50c878; font-weight: 700; }
+  .ae-sum-skip { background: #1a1a24; color: #5a6a7a; }
+  .ae-summary-row .ae-difficulty { margin-left: auto; }
+
+  /* Tutorial mode */
+  .ae-tutorial-steps { display: flex; flex-direction: column; gap: 4px; }
+  .ae-tut-step {
+    display: block; width: 100%; padding: 7px 10px; border: 1px solid #1e3450; border-radius: 6px;
+    background: #162840; color: #8ab4d0; font-size: 0.82rem; cursor: pointer; text-align: left;
+    transition: background 0.2s;
+  }
+  .ae-tut-step:hover { background: #1e3a58; }
+  .ae-tut-current { background: #1a3a28; border-color: #2a6a3a; color: #60d080; font-weight: 600; }
+  .ae-tut-visited { color: #50c878; }
+  .ae-tutorial-text { font-size: 0.88rem; color: #c0ccd8; line-height: 1.6; margin-top: 8px; }
+  .ae-tutorial-glow {
+    box-shadow: 0 0 12px 3px rgba(80, 200, 120, 0.5);
+    border-color: #50c878 !important;
+  }
+</style>
+</head>
+<body>
+
+<h1>Figure Critique: E80 Guidelines</h1>
+<p class="subtitle">Identify issues in scientific figures using the HMC E80 rubric</p>
+
+<div class="container">
+  <!-- Left panel -->
+  <div class="panel" id="leftPanel"></div>
+
+  <!-- Center column -->
+  <div class="center-col">
+    <div class="panel" style="padding:8px;">
+      <canvas id="figureCanvas"></canvas>
+    </div>
+    <div class="caption-area" id="captionArea"></div>
+    <div class="center-controls" id="centerControls"></div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="panel" id="rightPanel"></div>
+</div>
+
+<script src="../_shared/assessment-engine.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  DATA GENERATORS
+// ═══════════════════════════════════════════════════════════════
+
+function sineWithNoise(n, freq, amp, noise, phase) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    pts.push({ x: t, y: amp * Math.sin(2 * Math.PI * freq * t + (phase || 0)) + (Math.random() - 0.5) * noise });
+  }
+  return pts;
+}
+
+function linearWithOutliers(n, slope, intercept, noise, outlierRate) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    let y = slope * t + intercept + (Math.random() - 0.5) * noise;
+    if (Math.random() < (outlierRate || 0)) y += (Math.random() - 0.5) * slope * 3;
+    pts.push({ x: t, y });
+  }
+  return pts;
+}
+
+function stepResponse(n, tau, overshoot, finalVal) {
+  const pts = [];
+  const zeta = overshoot > 0 ? -Math.log(overshoot) / Math.sqrt(Math.PI * Math.PI + Math.log(overshoot) ** 2) : 1;
+  const wn = 1 / tau;
+  for (let i = 0; i < n; i++) {
+    const t = (i / (n - 1)) * tau * 8;
+    let y;
+    if (zeta < 1) {
+      const wd = wn * Math.sqrt(1 - zeta * zeta);
+      y = finalVal * (1 - Math.exp(-zeta * wn * t) * (Math.cos(wd * t) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * t)));
+    } else {
+      y = finalVal * (1 - Math.exp(-wn * t) * (1 + wn * t));
+    }
+    y += (Math.random() - 0.5) * finalVal * 0.01;
+    pts.push({ x: t, y });
+  }
+  return pts;
+}
+
+function exponentialDecay(n, tau, amp, offset, noise) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1) * tau * 5;
+    pts.push({ x: t, y: amp * Math.exp(-t / tau) + offset + (Math.random() - 0.5) * (noise || 0) });
+  }
+  return pts;
+}
+
+// Seeded pseudo-random for reproducible figures
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FIGURE RENDERER
+// ═══════════════════════════════════════════════════════════════
+
+function renderFigure(ctx, W, H, cfg) {
+  const rng = seededRandom(cfg.seed || 42);
+  // Temporarily replace Math.random for data generation
+  const origRandom = Math.random;
+  Math.random = rng;
+
+  ctx.save();
+  // White background for figure
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = { l: 72, r: 24, t: 32, b: 56 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  // Generate data
+  const series = (cfg.series || []).map(s => {
+    let data;
+    if (s.generator === 'sineWithNoise') data = sineWithNoise(s.n || 200, s.freq || 2, s.amp || 1, s.noise || 0.1, s.phase || 0);
+    else if (s.generator === 'linearWithOutliers') data = linearWithOutliers(s.n || 100, s.slope || 1, s.intercept || 0, s.noise || 0.05, s.outlierRate || 0);
+    else if (s.generator === 'stepResponse') data = stepResponse(s.n || 300, s.tau || 1, s.overshoot || 0.2, s.finalVal || 1);
+    else if (s.generator === 'exponentialDecay') data = exponentialDecay(s.n || 200, s.tau || 1, s.amp || 1, s.offset || 0, s.noise || 0.02);
+    else data = [];
+    return { ...s, data };
+  });
+
+  // Compute data ranges (or use config overrides)
+  let xMin = cfg.xMin != null ? cfg.xMin : Infinity, xMax = cfg.xMax != null ? cfg.xMax : -Infinity;
+  let yMin = cfg.yMin != null ? cfg.yMin : Infinity, yMax = cfg.yMax != null ? cfg.yMax : -Infinity;
+  for (const s of series) {
+    for (const p of s.data) {
+      if (cfg.xMin == null && p.x < xMin) xMin = p.x;
+      if (cfg.xMax == null && p.x > xMax) xMax = p.x;
+      if (cfg.yMin == null && p.y < yMin) yMin = p.y;
+      if (cfg.yMax == null && p.y > yMax) yMax = p.y;
+    }
+  }
+  // Add margin
+  if (cfg.yMin == null) { const m = (yMax - yMin) * 0.08; yMin -= m; yMax += m; }
+  if (cfg.xMin == null) { const m = (xMax - xMin) * 0.02; xMin -= m; xMax += m; }
+
+  const xToP = x => pad.l + ((x - xMin) / (xMax - xMin)) * pw;
+  const yToP = y => pad.t + ph - ((y - yMin) / (yMax - yMin)) * ph;
+
+  // Grid lines
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth = 0.5;
+  const nYTicks = cfg.nYTicks || 6;
+  const nXTicks = cfg.nXTicks || 6;
+  for (let i = 0; i <= nYTicks; i++) {
+    const y = pad.t + (i / nYTicks) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke();
+  }
+  for (let i = 0; i <= nXTicks; i++) {
+    const x = pad.l + (i / nXTicks) * pw;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke();
+  }
+
+  // Plot area border
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  // Tick labels
+  const tickFont = cfg.tickFontSize || 11;
+  ctx.font = `${tickFont}px 'Courier New', monospace`;
+  ctx.fillStyle = '#333';
+
+  // Y-axis ticks
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= nYTicks; i++) {
+    const val = yMax - (i / nYTicks) * (yMax - yMin);
+    const y = pad.t + (i / nYTicks) * ph;
+    ctx.fillText(val.toFixed(cfg.yDecimals != null ? cfg.yDecimals : 1), pad.l - 8, y);
+    // Tick mark
+    ctx.beginPath(); ctx.moveTo(pad.l - 4, y); ctx.lineTo(pad.l, y); ctx.stroke();
+  }
+
+  // X-axis ticks
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i <= nXTicks; i++) {
+    const val = xMin + (i / nXTicks) * (xMax - xMin);
+    const x = pad.l + (i / nXTicks) * pw;
+    ctx.fillText(val.toFixed(cfg.xDecimals != null ? cfg.xDecimals : 1), x, pad.t + ph + 6);
+    ctx.beginPath(); ctx.moveTo(x, pad.t + ph); ctx.lineTo(x, pad.t + ph + 4); ctx.stroke();
+  }
+
+  // Axis labels
+  const axisFont = cfg.axisFontSize || 13;
+  // X-axis label
+  if (cfg.xLabel) {
+    ctx.font = `${axisFont}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.fillStyle = '#222';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(cfg.xLabel, pad.l + pw / 2, pad.t + ph + 32);
+  }
+  // Y-axis label
+  if (cfg.yLabel) {
+    ctx.save();
+    ctx.font = `${axisFont}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.fillStyle = '#222';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.translate(16, pad.t + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(cfg.yLabel, 0, 0);
+    ctx.restore();
+  }
+
+  // Draw series
+  const lineWidth = cfg.lineWidth || 2;
+  const colors = ['#2266cc', '#cc4422', '#22aa44', '#aa44cc', '#cc8800'];
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (let si = 0; si < series.length; si++) {
+    const s = series[si];
+    const col = s.color || colors[si % colors.length];
+    ctx.strokeStyle = col;
+    ctx.lineWidth = s.lineWidth || lineWidth;
+    // Clip to plot area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pad.l, pad.t, pw, ph);
+    ctx.clip();
+    ctx.beginPath();
+    for (let i = 0; i < s.data.length; i++) {
+      const px = xToP(s.data[i].x), py = yToP(s.data[i].y);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Legend
+  if (cfg.legend && cfg.legend.show !== false) {
+    const leg = cfg.legend;
+    const legX = leg.x != null ? leg.x : pad.l + pw - 140;
+    const legY = leg.y != null ? leg.y : pad.t + 10;
+    const items = series.filter(s => s.label);
+    if (items.length > 0) {
+      const lw = leg.width || 130;
+      const lh = items.length * 20 + 10;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 0.5;
+      ctx.fillRect(legX, legY, lw, lh);
+      ctx.strokeRect(legX, legY, lw, lh);
+      ctx.font = `${leg.fontSize || 11}px 'Segoe UI', system-ui, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < items.length; i++) {
+        const iy = legY + 14 + i * 20;
+        const col = items[i].color || colors[series.indexOf(items[i]) % colors.length];
+        ctx.strokeStyle = col;
+        ctx.lineWidth = items[i].lineWidth || lineWidth;
+        ctx.beginPath(); ctx.moveTo(legX + 8, iy); ctx.lineTo(legX + 28, iy); ctx.stroke();
+        ctx.fillStyle = '#333';
+        ctx.fillText(items[i].label, legX + 34, iy);
+      }
+    }
+  }
+
+  // Title on figure (optional)
+  if (cfg.title) {
+    ctx.font = `bold 14px 'Segoe UI', system-ui, sans-serif`;
+    ctx.fillStyle = '#111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(cfg.title, pad.l + pw / 2, 8);
+  }
+
+  ctx.restore();
+  Math.random = origRandom;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HIT ZONE LAYOUT (matches figure padding)
+// ═══════════════════════════════════════════════════════════════
+
+function computeFigureZones(W, H, challenge) {
+  const pad = { l: 72, r: 24, t: 32, b: 56 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  const zones = [
+    { id: 'title', rect: { x: pad.l, y: 0, w: pw, h: pad.t }, rubricIds: ['title'] },
+    { id: 'y-axis', rect: { x: 0, y: pad.t, w: pad.l, h: ph }, rubricIds: ['y-axis-label', 'tick-legibility'] },
+    { id: 'x-axis', rect: { x: pad.l, y: pad.t + ph, w: pw, h: pad.b }, rubricIds: ['x-axis-label', 'tick-legibility'] },
+    { id: 'plot-area', rect: { x: pad.l, y: pad.t, w: pw, h: ph }, rubricIds: ['visual-clarity', 'overcrowding', 'data-trimming', 'zoom-level'] },
+  ];
+
+  // Legend zone (if legend exists in config)
+  const cfg = challenge.plotConfig;
+  if (cfg.legend && cfg.legend.show !== false) {
+    const legX = cfg.legend.x != null ? cfg.legend.x : pad.l + pw - 140;
+    const legY = cfg.legend.y != null ? cfg.legend.y : pad.t + 10;
+    const legW = cfg.legend.width || 130;
+    const nItems = (cfg.series || []).filter(s => s.label).length;
+    const legH = nItems * 20 + 10;
+    zones.push({ id: 'legend', rect: { x: legX, y: legY, w: legW, h: Math.max(legH, 30) }, rubricIds: ['legend'] });
+  }
+
+  return zones;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RUBRIC (E80 guidelines)
+// ═══════════════════════════════════════════════════════════════
+
+const RUBRIC = [
+  { id: 'y-axis-label', category: 'Axes', shortName: 'Y-Axis Label', description: 'Y-axis must have a clear label with correct units in parentheses.' },
+  { id: 'x-axis-label', category: 'Axes', shortName: 'X-Axis Label', description: 'X-axis must have a clear label with correct units in parentheses.' },
+  { id: 'tick-legibility', category: 'Axes', shortName: 'Tick Marks', description: 'Tick marks and labels must be legible — not too small or crowded.' },
+  { id: 'visual-clarity', category: 'Presentation', shortName: 'Visual Clarity', description: 'Lines must be thick enough to see. Colours should be distinguishable.' },
+  { id: 'overcrowding', category: 'Presentation', shortName: 'Overcrowding', description: 'Too many series or data make the plot hard to read.' },
+  { id: 'data-trimming', category: 'Data', shortName: 'Data Trimmed', description: 'Remove irrelevant leading/trailing data before plotting \u2014 e.g., a 10-second recording where the first 4 seconds are flat noise before the experiment starts.' },
+  { id: 'legend', category: 'Presentation', shortName: 'Legend', description: 'Multiple series need a legend, placed so it doesn\'t obscure data.' },
+  { id: 'zoom-level', category: 'Data', shortName: 'Zoom Level', description: 'Axis range is too wide relative to the signal, making features tiny \u2014 e.g., data spans 22\u201327 \u00b0C but the y-axis shows 0\u201380 \u00b0C.' },
+  { id: 'caption', category: 'Text', shortName: 'Caption', description: 'Figure must have a numbered caption (e.g. "Figure 1: ...") that summarises the content.' },
+  { id: 'supporting-text', category: 'Text', shortName: 'Supporting Text', description: 'Report text must reference the figure by number and explain what the reader should notice.' },
+  { id: 'title', category: 'Text', shortName: 'Title', description: 'Figure should have a concise, descriptive title on the plot that tells the reader what is shown.' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  CHALLENGE BANK (7 challenges)
+// ═══════════════════════════════════════════════════════════════
+
+const CHALLENGES = [
+  // ── 1. Well-Made Figure (Tutorial) ──
+  {
+    type: 'tutorial',
+    title: 'Well-Made Figure',
+    difficulty: 'easy',
+    plotConfig: {
+      seed: 707,
+      title: 'Depth Step Response Under Proportional Control',
+      xLabel: 'Time (s)',
+      yLabel: 'Depth (m)',
+      series: [
+        { generator: 'stepResponse', n: 300, tau: 1.0, overshoot: 0.1, finalVal: 1.5, label: 'Measured', color: '#2266cc' },
+        { generator: 'linearWithOutliers', n: 300, slope: 0, intercept: 1.5, noise: 0, label: 'Target', color: '#cc4422', lineWidth: 1.5 },
+      ],
+      legend: { show: true },
+    },
+    caption: 'Figure 5: Depth response of the underwater robot during a step command to 1.5 m. The proportional controller achieves the target depth with approximately 10% overshoot.',
+    supportingText: 'Figure 5 shows the depth tracking response. The robot reaches the commanded depth of 1.5 m within 3 seconds, with a single overshoot of approximately 10%. The steady-state error is less than 1 cm, confirming adequate proportional gain.',
+    answerKey: [],
+    hints: [],
+    tutorialSteps: [
+      { zoneId: 'title', label: 'Title', text: 'This figure has a clear, descriptive title: "Depth Step Response Under Proportional Control". A good title tells the reader exactly what the figure shows \u2014 the system being measured, the type of experiment, and key conditions.' },
+      { zoneId: 'y-axis', label: 'Y-Axis', text: 'The y-axis is labeled "Depth (m)" \u2014 a clear quantity with SI units in parentheses. The tick marks are legible and the range tightly frames the data, making features easy to see.' },
+      { zoneId: 'x-axis', label: 'X-Axis', text: 'The x-axis uses "Time (s)" with the correct SI abbreviation. The range matches the duration of the experiment with no wasted space.' },
+      { zoneId: 'plot-area', label: 'Plot Area', text: 'The lines are thick enough to see clearly. Only two series are shown, avoiding overcrowding. The data is trimmed to the relevant time window \u2014 no flat noise before the step.' },
+      { zoneId: 'legend', label: 'Legend', text: 'The legend identifies both series ("Measured" and "Target") and is placed where it doesn\'t obscure any data points.' },
+      { zoneId: 'caption', label: 'Caption', text: 'The caption follows the "Figure N: ..." format and provides a quantitative summary \u2014 it mentions the 1.5 m target depth and the ~10% overshoot.', domTarget: true },
+      { zoneId: 'supporting-text', label: 'Supporting Text', text: 'The body text references "Figure 5" by number and highlights specific observations: the 3-second settling time, 10% overshoot, and <1 cm steady-state error.', domTarget: true },
+    ],
+  },
+
+  // ── 2. Accelerometer Noise Floor (Easy) ──
+  {
+    title: 'Accelerometer Noise Floor',
+    difficulty: 'easy',
+    plotConfig: {
+      seed: 101,
+      xLabel: '',  // MISSING x-label
+      yLabel: 'Output',  // VAGUE y-label (no units)
+      tickFontSize: 7,   // TOO SMALL ticks
+      series: [
+        { generator: 'sineWithNoise', n: 500, freq: 3, amp: 0.5, noise: 0.15, label: null, color: '#2266cc' },
+        { generator: 'sineWithNoise', n: 500, freq: 3, amp: 0.3, noise: 0.2, phase: 1.2, label: null, color: '#cc4422' },
+      ],
+      legend: { show: false },   // NO LEGEND for 2 series
+      xMin: -0.2, xMax: 1.2,    // UNTRIMMED (extra empty space)
+    },
+    caption: 'Noise floor measurements from the accelerometer.',  // BAD: no figure number, vague
+    supportingText: 'The data shows the output of the accelerometer during the noise floor test. Some oscillation is visible in the signals.',
+    answerKey: [
+      { rubricId: 'x-axis-label', zoneId: 'x-axis', explanation: 'The x-axis has no label at all. It should state "Time (s)" or the relevant quantity and units.' },
+      { rubricId: 'y-axis-label', zoneId: 'y-axis', explanation: '"Output" is vague — it should specify "Acceleration (m/s\u00b2)" or similar with proper units.' },
+      { rubricId: 'tick-legibility', zoneId: 'y-axis', explanation: 'The tick font size is too small (7px) to be easily readable.' },
+      { rubricId: 'legend', zoneId: 'plot-area', explanation: 'There are two series plotted but no legend to identify them.' },
+      { rubricId: 'caption', zoneId: 'x-axis', explanation: 'The caption is missing a figure number (should be "Figure N: ...") and is too vague.' },
+      { rubricId: 'data-trimming', zoneId: 'plot-area', explanation: 'There is unnecessary empty space before and after the data — the x-range should be trimmed.' },
+      { rubricId: 'title', zoneId: 'title', explanation: 'The figure has no title. It should have a concise, descriptive title like "Accelerometer Noise Floor Measurements".' },
+    ],
+    hints: [
+      'Look carefully at the axis labels — are they complete?',
+      'How many data series are shown? Can you tell which is which?',
+      'Check the tick mark font size — is it legible?',
+      'Does the caption follow the "Figure N: ..." format?',
+    ],
+  },
+
+  // ── 2. Temperature vs Time (Easy) ──
+  {
+    title: 'Temperature vs Time',
+    difficulty: 'easy',
+    plotConfig: {
+      seed: 202,
+      title: 'Cool-Down Temperature Readings',
+      xLabel: 'Time (s)',
+      yLabel: 'Temperature',  // Missing units
+      series: [
+        { generator: 'exponentialDecay', n: 200, tau: 10, amp: 5, offset: 22, noise: 0.3, label: 'Sensor A', color: '#2266cc' },
+        { generator: 'exponentialDecay', n: 200, tau: 12, amp: 4, offset: 22.5, noise: 0.3, label: 'Sensor B', color: '#cc4422' },
+      ],
+      legend: { show: true, x: 160, y: 60 },  // Legend OVER data area
+      yMin: 0, yMax: 80,    // BAD ZOOM — signal is 22-27 but axis goes to 80
+    },
+    caption: 'Figure 1: Temperature readings during cool-down.',
+    supportingText: 'Figure 1 shows the temperature measurements from two sensors during the cool-down phase. Sensor A cools slightly faster than Sensor B, consistent with its lower thermal mass.',
+    answerKey: [
+      { rubricId: 'y-axis-label', zoneId: 'y-axis', explanation: '"Temperature" lacks units — it should be "Temperature (\u00b0C)" or "Temperature (K)".' },
+      { rubricId: 'legend', zoneId: 'legend', explanation: 'The legend is placed directly over the data region, making it hard to read the underlying traces.' },
+      { rubricId: 'zoom-level', zoneId: 'plot-area', explanation: 'The y-axis goes from 0 to 80, but the signal only spans about 22\u201327. The interesting features are tiny. Zoom in on the relevant range.' },
+    ],
+    hints: [
+      'Check whether the y-axis label has proper units.',
+      'Is the legend position optimal?',
+      'Can you clearly see the difference between the two traces?',
+    ],
+  },
+
+  // ── 3. Frequency Response (Medium) ──
+  {
+    title: 'Frequency Response',
+    difficulty: 'medium',
+    plotConfig: {
+      seed: 303,
+      title: 'Frequency Response',
+      xLabel: 'Frequency (Hz)',
+      yLabel: 'Magnitude (dB)',
+      series: [
+        { generator: 'sineWithNoise', n: 200, freq: 0.5, amp: 3, noise: 0.4, label: 'Ch 1', color: '#2266cc' },
+        { generator: 'sineWithNoise', n: 200, freq: 0.7, amp: 2.5, noise: 0.4, label: 'Ch 2', color: '#cc4422' },
+        { generator: 'sineWithNoise', n: 200, freq: 0.3, amp: 2, noise: 0.4, label: 'Ch 3', color: '#22aa44' },
+        { generator: 'sineWithNoise', n: 200, freq: 0.9, amp: 2.8, noise: 0.4, label: 'Ch 4', color: '#aa44cc' },
+        { generator: 'sineWithNoise', n: 200, freq: 0.6, amp: 2.2, noise: 0.4, label: 'Ch 5', color: '#cc8800' },
+      ],
+      legend: { show: true, x: null, y: null },
+      xMin: -0.3, xMax: 1.3,  // UNTRIMMED
+    },
+    caption: 'Frequency response of the five channels, it shows the magnitude in dB.',  // Grammar issues, no figure number
+    supportingText: 'The frequency response was measured for all channels. There is variation across the channels.',
+    answerKey: [
+      { rubricId: 'overcrowding', zoneId: 'plot-area', explanation: 'Five overlapping series with similar amplitudes makes the plot very hard to read. Consider splitting into subplots or reducing series.' },
+      { rubricId: 'data-trimming', zoneId: 'plot-area', explanation: 'There is empty space on both sides of the data (x goes from -0.3 to 1.3 for data spanning 0 to 1).' },
+      { rubricId: 'caption', zoneId: 'x-axis', explanation: 'The caption is missing a figure number and has a run-on sentence.' },
+      { rubricId: 'supporting-text', zoneId: 'x-axis', explanation: 'The supporting text is vague — it should specifically describe what the reader should observe and reference the figure by number.' },
+      { rubricId: 'title', zoneId: 'title', explanation: '"Frequency Response" is too vague — it should specify what system or component, e.g., "Frequency Response of Amplifier Channels 1\u20135".' },
+    ],
+    hints: [
+      'Count the number of series — is the plot easy to read?',
+      'Look at the x-axis range vs. where the data actually is.',
+      'Read the caption carefully — does it follow proper format?',
+      'Does the supporting text tell you anything specific?',
+    ],
+  },
+
+  // ── 4. Pressure Calibration (Medium) ──
+  {
+    title: 'Pressure Calibration',
+    difficulty: 'medium',
+    plotConfig: {
+      seed: 404,
+      title: 'Calibration Results',
+      xLabel: 'Applied Pressure (kPa)',
+      yLabel: 'Sensor Reading (V)',
+      lineWidth: 0.8,  // TOO THIN
+      series: [
+        { generator: 'linearWithOutliers', n: 50, slope: 2.5, intercept: 0.1, noise: 0.05, outlierRate: 0.05, label: 'Calibration', color: '#2266cc' },
+      ],
+      legend: { show: false },
+      yMin: -5, yMax: 10,   // BAD ZOOM — data is 0-2.6 but axis shows -5 to 10
+      xMin: -2, xMax: 3,    // BAD ZOOM
+    },
+    caption: 'Figure 2: Pressure sensor calibration curve.',
+    supportingText: 'A calibration was performed. The sensor output looks linear.',
+    answerKey: [
+      { rubricId: 'zoom-level', zoneId: 'plot-area', explanation: 'The axis ranges are far too wide — the data occupies a tiny region. Zoom in to make the calibration curve fill the plot.' },
+      { rubricId: 'visual-clarity', zoneId: 'plot-area', explanation: 'The line weight is too thin (0.8px) making the data hard to see, especially against the grid.' },
+      { rubricId: 'supporting-text', zoneId: 'x-axis', explanation: '"A calibration was performed. The sensor output looks linear" is vague. It should reference Figure 2 and describe the slope, R\u00b2 value, or calibration equation.' },
+      { rubricId: 'title', zoneId: 'title', explanation: '"Calibration Results" is too vague — it should specify the sensor and measured quantity, e.g., "Pressure Sensor Calibration: Output Voltage vs. Applied Pressure".' },
+    ],
+    hints: [
+      'How much of the plot area does the actual data occupy?',
+      'Can you easily see the data line against the grid?',
+      'Does the report text help the reader understand the figure?',
+    ],
+  },
+
+  // ── 5. Motor Step Response (Medium) ──
+  {
+    title: 'Motor Step Response',
+    difficulty: 'medium',
+    plotConfig: {
+      seed: 505,
+      title: 'PID Step Response: Angular Velocity',
+      xLabel: 'Time (sec)',   // Wrong unit format: should be "s" not "sec"
+      yLabel: 'Angular Velocity (rad/s)',
+      series: [
+        { generator: 'stepResponse', n: 400, tau: 0.5, overshoot: 0.15, finalVal: 10, label: 'Motor output', color: '#2266cc' },
+        { generator: 'linearWithOutliers', n: 400, slope: 0, intercept: 10, noise: 0, label: 'Reference', color: '#cc4422', lineWidth: 1.5 },
+      ],
+      legend: { show: true, x: 72, y: 34 },  // Legend in top-left, partially over data
+    },
+    caption: 'Step response of the DC motor under PID control.',  // Missing figure number
+    supportingText: 'Figure 3 shows the motor step response. The system reaches steady state with approximately 15% overshoot and settles within about 2 seconds.',
+    answerKey: [
+      { rubricId: 'x-axis-label', zoneId: 'x-axis', explanation: 'The x-axis uses "sec" instead of the SI abbreviation "s". Proper format: "Time (s)".' },
+      { rubricId: 'legend', zoneId: 'legend', explanation: 'The legend is placed in the top-left where it overlaps with the step response overshoot region.' },
+      { rubricId: 'caption', zoneId: 'x-axis', explanation: 'The caption is missing a figure number. It should start with "Figure N: ...".' },
+    ],
+    hints: [
+      'Check the axis labels carefully — are the units in standard SI format?',
+      'Does the legend overlap any important features of the data?',
+      'Compare the caption to the E80 caption format requirements.',
+    ],
+  },
+
+  // ── 6. Vibration Spectrum (Hard) ──
+  {
+    title: 'Vibration Spectrum',
+    difficulty: 'hard',
+    plotConfig: {
+      seed: 606,
+      xLabel: 'Frequency (Hz)',
+      yLabel: 'Amplitude',  // Technically present but ambiguous (no units for spectral amplitude)
+      series: [
+        { generator: 'sineWithNoise', n: 300, freq: 2, amp: 1.0, noise: 0.15, label: 'Run 1', color: '#2266cc' },
+        { generator: 'sineWithNoise', n: 300, freq: 2, amp: 0.8, noise: 0.15, phase: 0.3, label: 'Run 2', color: '#cc4422' },
+        { generator: 'sineWithNoise', n: 300, freq: 2, amp: 0.9, noise: 0.15, phase: 0.7, label: 'Run 3', color: '#22aa44' },
+        { generator: 'sineWithNoise', n: 300, freq: 2, amp: 1.1, noise: 0.15, phase: 1.1, label: 'Run 4', color: '#aa44cc' },
+      ],
+      legend: { show: true, x: null, y: null, width: 130 },
+      xMin: -0.1, xMax: 1.1,  // Slightly untrimmed
+    },
+    caption: 'Figure 4: Vibration spectrum from the shaker table test.',
+    supportingText: 'The vibration spectrum was collected over four runs. The peaks are consistent across measurements, confirming the dominant frequency of the structure.',
+    answerKey: [
+      { rubricId: 'y-axis-label', zoneId: 'y-axis', explanation: '"Amplitude" is ambiguous for a spectrum — it should specify units like "Acceleration (g)" or "Displacement (mm)" and clarify if it\'s RMS, peak, or PSD.' },
+      { rubricId: 'overcrowding', zoneId: 'plot-area', explanation: 'Four very similar traces are hard to distinguish. Consider showing mean \u00b1 std, or using an inset for one representative run.' },
+      { rubricId: 'data-trimming', zoneId: 'plot-area', explanation: 'The x-axis extends slightly beyond the data range on both sides.' },
+      { rubricId: 'supporting-text', zoneId: 'x-axis', explanation: 'The supporting text doesn\'t reference the figure by number ("Figure 4") and doesn\'t describe specific frequencies or amplitudes the reader should notice.' },
+      { rubricId: 'title', zoneId: 'title', explanation: 'The figure has no title. It should have a descriptive title like "Vibration Spectrum from Shaker Table Test".' },
+    ],
+    hints: [
+      'The y-axis label is present — but is it specific enough for a scientific report?',
+      'Are all four runs really needed on one plot?',
+      'Read the supporting text — does it reference the figure properly and give specifics?',
+      'Check whether the data range exactly matches the x-axis range.',
+    ],
+  },
+
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  WIRE EVERYTHING UP
+// ═══════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('figureCanvas');
+const captionArea = document.getElementById('captionArea');
+
+const engine = new AssessmentEngine({
+  canvas: canvas,
+  rubric: RUBRIC,
+  challenges: CHALLENGES,
+  renderContent: (ctx, W, H, ch) => renderFigure(ctx, W, H, ch.plotConfig),
+  computeZones: (W, H, ch) => computeFigureZones(W, H, ch),
+  onChallengeLoad: (ch) => {
+    // Update caption area
+    let capHTML = '';
+    capHTML += `<div class="caption-label">${ch.caption}</div>`;
+    capHTML += `<div class="supporting-text">${ch.supportingText}</div>`;
+    captionArea.innerHTML = capHTML;
+
+    // Make caption and supporting text clickable zones for text rubric items
+    captionArea.onclick = (e) => {
+      if (engine.reviewMode) return;
+      const rect = captionArea.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      // Place annotation at bottom of canvas
+      const cx = canvasRect.width / 2;
+      const cy = canvasRect.height - 15;
+      // Create a virtual zone for text items
+      const textZone = { id: 'text-area', rect: { x: 0, y: 0, w: canvasRect.width, h: canvasRect.height }, rubricIds: ['caption', 'supporting-text'] };
+      engine._openPicker(textZone, cx, cy, e.clientX, e.clientY);
+    };
+    captionArea.style.cursor = 'pointer';
+  },
+  onTutorialStep: (step) => {
+    captionArea.classList.remove('ae-tutorial-glow');
+    if (step && step.domTarget) {
+      captionArea.classList.add('ae-tutorial-glow');
+    }
+  },
+  leftPanelEl: document.getElementById('leftPanel'),
+  rightPanelEl: document.getElementById('rightPanel'),
+  centerControlsEl: document.getElementById('centerControls'),
+});
+
+engine.start();
+</script>
+</body>
+</html>

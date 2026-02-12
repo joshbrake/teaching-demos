@@ -76,6 +76,12 @@ DEMOS = [
         "description": "Two masses orbiting their common center of mass. Adjust masses, semi-major axis, and eccentricity to explore Kepler's laws and orbital mechanics.",
         "tags": ["Mechanics", "Gravity", "Kepler's Laws"],
     },
+    {
+        "slug": "figure-critique",
+        "title": "Figure Critique: E80 Guidelines",
+        "description": "Identify issues in scientific figures using the HMC E80 rubric. Click on problem areas, classify issues, then check your answers against the key.",
+        "tags": ["Scientific Writing", "Figures", "Assessment"],
+    },
 ]
 
 

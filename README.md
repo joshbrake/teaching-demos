@@ -10,6 +10,7 @@ An optional Flask app lets you serve all demos from one place with a landing pag
 |------|-------|-------------|
 | [Feedback Control](demos/feedback-control/) | Controls | Proportional depth control of an underwater robot. Explore how gain affects overshoot, damping, and rise time. Based on HMC E79 Practicum 5. |
 | [Two-Body Orbits](demos/two-body-orbit/) | Mechanics | Two masses orbiting their barycenter under Newtonian gravity. Adjust masses, semi-major axis, and eccentricity. |
+| [Figure Critique](demos/figure-critique/) | Scientific Writing | Identify issues in scientific figures using the HMC E80 rubric. Click problem areas, classify issues, check answers. |
 
 ## Quick Start
 
