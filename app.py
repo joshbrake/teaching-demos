@@ -82,6 +82,12 @@ DEMOS = [
         "description": "Identify issues in scientific figures using the HMC E80 rubric. Click on problem areas, classify issues, then check your answers against the key.",
         "tags": ["Scientific Writing", "Figures", "Assessment"],
     },
+    {
+        "slug": "progressive-rendering",
+        "title": "Progressive Rendering: Why Basis Functions Matter",
+        "description": "Compare pixel-by-pixel vs. DCT frequency ordering to see why JPEG compression works. Same data, different basis — dramatically different quality.",
+        "tags": ["Signal Processing", "Compression", "JPEG"],
+    },
 ]
 
 

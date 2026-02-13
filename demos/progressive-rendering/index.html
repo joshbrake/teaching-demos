@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progressive Rendering: Why Basis Functions Matter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628; color: #e0e8f0;
+    overflow-x: hidden;
+  }
+  h1 { text-align: center; padding: 18px 0 2px; font-size: 1.5rem; color: #7ec8f0; }
+  .subtitle { text-align: center; color: #6a8da8; font-size: 0.88rem; margin-bottom: 10px; }
+
+  .container {
+    display: grid;
+    grid-template-columns: 260px 1fr 240px;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 12px 16px;
+  }
+  .panel {
+    background: #111e30;
+    border: 1px solid #1e3450;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .panel h2 {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: #5a9cc0; margin-bottom: 10px;
+  }
+
+  /* Left panel */
+  .controls { grid-column: 1; grid-row: 1 / 3; }
+  .control-group { margin-bottom: 14px; }
+  .control-group:last-child { margin-bottom: 0; }
+  label {
+    display: block; font-size: 0.78rem; color: #8ab4d0;
+    margin-bottom: 4px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type="range"] { flex: 1; }
+  .slider-val {
+    font-family: 'Courier New', monospace; font-size: 0.82rem;
+    color: #7ec8f0; min-width: 48px; text-align: right;
+  }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px; background: #1e3450; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #4a9ece; border: 2px solid #7ec8f0; cursor: pointer;
+  }
+
+  /* Image selector */
+  .img-selector { display: flex; gap: 4px; margin-bottom: 14px; }
+  .img-btn {
+    flex: 1; padding: 6px 4px; font-size: 0.72rem;
+    background: #162840; color: #7ec8f0; border: 1px solid #2a4a6a;
+    border-radius: 6px; cursor: pointer; text-align: center;
+    transition: background 0.15s;
+  }
+  .img-btn:hover { background: #1e3a58; }
+  .img-btn.active { background: #2a5a80; border-color: #4a9ece; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  button {
+    padding: 7px 14px; font-size: 0.8rem; border-radius: 6px;
+    border: 1px solid #2a4a6a; background: #162840; color: #7ec8f0;
+    cursor: pointer; transition: background 0.15s;
+  }
+  button:hover { background: #1e3a58; }
+  .go-btn { background: #1a4028; color: #60d080; border-color: #2a6a3a; flex: 1; }
+  .go-btn:hover { background: #245030; }
+  .go-btn.playing { background: #402818; color: #f0a050; border-color: #6a4a2a; }
+
+  /* Metrics */
+  .metrics { font-size: 0.78rem; }
+  .metric-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 0; border-bottom: 1px solid #1a2a40;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { color: #6a8da8; }
+  .metric-val { font-family: 'Courier New', monospace; color: #7ec8f0; }
+  .metric-val.good { color: #60d080; }
+
+  /* Center: canvas area */
+  .canvas-area { grid-column: 2; grid-row: 1; }
+  .canvas-pair {
+    display: flex; gap: 10px; margin-bottom: 8px;
+  }
+  .canvas-col { flex: 1; text-align: center; }
+  .canvas-col h3 {
+    font-size: 0.72rem; color: #5a9cc0; margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .canvas-col canvas {
+    width: 100%; aspect-ratio: 1; display: block;
+    border: 1px solid #1e3450; border-radius: 4px;
+    background: #000;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .data-bar {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.75rem; color: #6a8da8;
+  }
+  .bar-track {
+    flex: 1; height: 6px; background: #1e3450; border-radius: 3px; overflow: hidden;
+  }
+  .bar-fill { height: 100%; background: #4a9ece; border-radius: 3px; transition: width 0.05s; }
+
+  /* Center: plot */
+  .plot-area { grid-column: 2; grid-row: 2; }
+  .plot-area canvas { width: 100%; height: 180px; display: block; border-radius: 4px; }
+
+  /* Right panel */
+  .basis-panel { grid-column: 3; grid-row: 1; }
+  .basis-panel canvas {
+    width: 100%; aspect-ratio: 1; display: block;
+    border-radius: 4px; margin-bottom: 6px;
+  }
+  .basis-caption { font-size: 0.7rem; color: #6a8da8; line-height: 1.5; }
+
+  .info-panel { grid-column: 3; grid-row: 2; }
+  .info-panel p { font-size: 0.75rem; color: #6a8da8; line-height: 1.6; margin-bottom: 8px; }
+  .info-panel p:last-child { margin-bottom: 0; }
+  .info-panel strong { color: #8ab4d0; }
+
+  /* Responsive */
+  @media (max-width: 960px) {
+    .container {
+      grid-template-columns: 1fr;
+      max-width: 600px;
+    }
+    .controls { grid-column: 1; grid-row: auto; }
+    .canvas-area { grid-column: 1; grid-row: auto; }
+    .plot-area { grid-column: 1; grid-row: auto; }
+    .basis-panel { grid-column: 1; grid-row: auto; }
+    .info-panel { grid-column: 1; grid-row: auto; }
+    .basis-panel canvas { max-width: 220px; margin: 0 auto 6px; }
+  }
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; }
+    .canvas-pair { flex-direction: column; }
+    button { min-height: 44px; }
+    .plot-area canvas { height: 150px; }
+  }
+</style>
+</head>
+<body>
+<h1>Progressive Rendering: Why Basis Functions Matter</h1>
+<p class="subtitle">Same data, different order &mdash; see why JPEG compression works so well</p>
+
+<div class="container">
+  <!-- LEFT: Controls -->
+  <div class="panel controls">
+    <h2>Controls</h2>
+
+    <div class="control-group">
+      <label>Data used</label>
+      <div class="slider-row">
+        <input type="range" id="dataSlider" min="0" max="100" step="0.5" value="0">
+        <span class="slider-val" id="dataDisplay">0.0%</span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="go-btn" id="playBtn">Play</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+
+    <div class="control-group">
+      <label>Animation speed</label>
+      <div class="slider-row">
+        <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1">
+        <span class="slider-val" id="speedDisplay">1.0x</span>
+      </div>
+    </div>
+
+    <h2>Test Image</h2>
+    <div class="img-selector">
+      <button class="img-btn active" data-img="campus">Campus</button>
+      <button class="img-btn" data-img="gradient">Gradient</button>
+      <button class="img-btn" data-img="checker">Checker</button>
+    </div>
+
+    <h2>Quality Metrics</h2>
+    <div class="metrics">
+      <div class="metric-row">
+        <span class="metric-label">Coefficients</span>
+        <span class="metric-val" id="metCoeffs">0 / 16,384</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">MSE (Pixel)</span>
+        <span class="metric-val" id="metMsePixel">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">MSE (DCT)</span>
+        <span class="metric-val" id="metMseDct">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">PSNR (Pixel)</span>
+        <span class="metric-val" id="metPsnrPixel">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">PSNR (DCT)</span>
+        <span class="metric-val" id="metPsnrDct">--</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">DCT advantage</span>
+        <span class="metric-val good" id="metAdvantage">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER TOP: Canvas pair -->
+  <div class="panel canvas-area">
+    <div class="canvas-pair">
+      <div class="canvas-col">
+        <h3>Pixel Basis (Raster)</h3>
+        <canvas id="pixelCanvas"></canvas>
+      </div>
+      <div class="canvas-col">
+        <h3>DCT Basis (Progressive)</h3>
+        <canvas id="dctCanvas"></canvas>
+      </div>
+    </div>
+    <div class="data-bar">
+      <span id="barLabel">0.0% data</span>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+  </div>
+
+  <!-- CENTER BOTTOM: Quality plot -->
+  <div class="panel plot-area">
+    <h2>Quality vs. Data Used</h2>
+    <canvas id="plotCanvas"></canvas>
+  </div>
+
+  <!-- RIGHT TOP: Basis functions -->
+  <div class="panel basis-panel">
+    <h2>DCT Basis Functions</h2>
+    <canvas id="basisCanvas"></canvas>
+    <p class="basis-caption">8&times;8 DCT basis patterns. Low frequency at top-left, high at bottom-right. Active coefficients highlighted in cyan.</p>
+  </div>
+
+  <!-- RIGHT BOTTOM: Info -->
+  <div class="panel info-panel">
+    <h2>How It Works</h2>
+    <p>Both views use the <strong>exact same amount of data</strong> at every point. The only difference is the <strong>order</strong> in which information is revealed.</p>
+    <p><strong>Pixel basis</strong> sends pixels left-to-right, top-to-bottom. You see a growing strip of the image.</p>
+    <p><strong>DCT basis</strong> sends low-frequency coefficients first, then progressively higher frequencies. You see a blurry-but-complete image that sharpens over time.</p>
+    <p>Natural images concentrate most energy in low frequencies, so the DCT representation captures the important structure first. This is <strong>why JPEG works</strong>: discard high-frequency coefficients with minimal visible impact.</p>
+    <p><strong>Try it:</strong> Compare Campus vs. Checkerboard at 10%. Which basis wins for each?</p>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────
+const N = 8;               // DCT block size
+const IMG_W = 128;
+const IMG_H = 128;
+const BLOCKS_X = IMG_W / N;
+const BLOCKS_Y = IMG_H / N;
+const TOTAL_BLOCKS = BLOCKS_X * BLOCKS_Y;
+const TOTAL_COEFFS = IMG_W * IMG_H;
+
+// Precompute cosine table: cos(pi/N * (n+0.5) * k) for n,k in [0,N)
+const COS_TABLE = new Float64Array(N * N);
+for (let k = 0; k < N; k++) {
+  for (let n = 0; n < N; n++) {
+    COS_TABLE[k * N + n] = Math.cos(Math.PI / N * (n + 0.5) * k);
+  }
+}
+
+// Normalisation constants
+const NORM = Math.sqrt(2 / N);
+const NORM0 = 1 / Math.sqrt(2);
+
+// ────────────────────────────────────────────────
+// Zigzag order within an 8x8 block
+// ────────────────────────────────────────────────
+function buildBlockZigzag() {
+  const order = [];
+  for (let s = 0; s < 2 * N - 1; s++) {
+    if (s % 2 === 0) {
+      for (let i = Math.min(s, N - 1); i >= Math.max(0, s - N + 1); i--) {
+        order.push([i, s - i]);
+      }
+    } else {
+      for (let i = Math.max(0, s - N + 1); i <= Math.min(s, N - 1); i++) {
+        order.push([i, s - i]);
+      }
+    }
+  }
+  return order; // array of [row, col], length 64
+}
+const BLOCK_ZIGZAG = buildBlockZigzag();
+
+// Global zigzag: for each zigzag position (0-63), list all blocks.
+// Position 0 = DC of every block, position 1 = first AC of every block, etc.
+function buildGlobalOrder() {
+  const order = []; // array of {bx, by, row, col}
+  for (let zi = 0; zi < N * N; zi++) {
+    const [r, c] = BLOCK_ZIGZAG[zi];
+    for (let by = 0; by < BLOCKS_Y; by++) {
+      for (let bx = 0; bx < BLOCKS_X; bx++) {
+        order.push({ bx, by, row: r, col: c });
+      }
+    }
+  }
+  return order;
+}
+const GLOBAL_ORDER = buildGlobalOrder();
+
+// ────────────────────────────────────────────────
+// DCT math
+// ────────────────────────────────────────────────
+function dct1d(x) {
+  const X = new Float64Array(N);
+  for (let k = 0; k < N; k++) {
+    let sum = 0;
+    for (let n = 0; n < N; n++) {
+      sum += x[n] * COS_TABLE[k * N + n];
+    }
+    X[k] = sum * NORM * (k === 0 ? NORM0 : 1);
+  }
+  return X;
+}
+
+function idct1d(X) {
+  const x = new Float64Array(N);
+  for (let n = 0; n < N; n++) {
+    let sum = X[0] * NORM0;
+    for (let k = 1; k < N; k++) {
+      sum += X[k] * COS_TABLE[k * N + n];
+    }
+    x[n] = sum * NORM;
+  }
+  return x;
+}
+
+// 2D DCT via separable passes (rows then columns)
+function dct2d(block) {
+  const temp = new Float64Array(N * N);
+  const row = new Float64Array(N);
+  // Transform rows
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) row[c] = block[r * N + c];
+    const tr = dct1d(row);
+    for (let c = 0; c < N; c++) temp[r * N + c] = tr[c];
+  }
+  // Transform columns
+  const result = new Float64Array(N * N);
+  const col = new Float64Array(N);
+  for (let c = 0; c < N; c++) {
+    for (let r = 0; r < N; r++) col[r] = temp[r * N + c];
+    const tc = dct1d(col);
+    for (let r = 0; r < N; r++) result[r * N + c] = tc[r];
+  }
+  return result;
+}
+
+function idct2d(coeffs) {
+  const temp = new Float64Array(N * N);
+  const row = new Float64Array(N);
+  // Inverse transform rows
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) row[c] = coeffs[r * N + c];
+    const tr = idct1d(row);
+    for (let c = 0; c < N; c++) temp[r * N + c] = tr[c];
+  }
+  // Inverse transform columns
+  const result = new Float64Array(N * N);
+  const col = new Float64Array(N);
+  for (let c = 0; c < N; c++) {
+    for (let r = 0; r < N; r++) col[r] = temp[r * N + c];
+    const tc = idct1d(col);
+    for (let r = 0; r < N; r++) result[r * N + c] = tc[r];
+  }
+  return result;
+}
+
+// ────────────────────────────────────────────────
+// Image generators (128x128 grayscale)
+// ────────────────────────────────────────────────
+
+// Harvey Mudd College photo, 128x128 grayscale PNG, base64-encoded
+const CAMPUS_B64 = 'data:image/png;base64,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';
+
+// Decode a base64 PNG data URL into a 128x128 grayscale Float64Array
+function decodeCampusImage() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = IMG_W; c.height = IMG_H;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, IMG_W, IMG_H);
+      const data = ctx.getImageData(0, 0, IMG_W, IMG_H).data;
+      const px = new Float64Array(IMG_W * IMG_H);
+      for (let i = 0; i < px.length; i++) {
+        // Average RGB to grayscale
+        px[i] = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+      }
+      resolve(px);
+    };
+    img.src = CAMPUS_B64;
+  });
+}
+
+function generateGradient() {
+  const px = new Float64Array(IMG_W * IMG_H);
+  for (let y = 0; y < IMG_H; y++) {
+    for (let x = 0; x < IMG_W; x++) {
+      // Smooth diagonal gradient with a gentle sine ripple
+      const nx = x / IMG_W, ny = y / IMG_H;
+      const base = (nx + ny) / 2 * 255;
+      const ripple = 20 * Math.sin(nx * Math.PI * 2) * Math.sin(ny * Math.PI * 2);
+      px[y * IMG_W + x] = Math.max(0, Math.min(255, base + ripple));
+    }
+  }
+  return px;
+}
+
+function generateChecker() {
+  const px = new Float64Array(IMG_W * IMG_H);
+  const size = 4; // 4-pixel squares
+  for (let y = 0; y < IMG_H; y++) {
+    for (let x = 0; x < IMG_W; x++) {
+      const cx = Math.floor(x / size);
+      const cy = Math.floor(y / size);
+      px[y * IMG_W + x] = ((cx + cy) % 2 === 0) ? 220 : 35;
+    }
+  }
+  return px;
+}
+
+// ────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────
+let originalPixels = null;
+let allDCTCoeffs = null; // Float64Array[TOTAL_BLOCKS][N*N] flat: [block0coeff0..63, block1coeff0..63, ...]
+let dataPercent = 0;
+let playing = false;
+let animSpeed = 1;
+let selectedImage = 'campus';
+
+// Precomputed quality curves
+let psnrCurvePixel = null; // Float64Array[101]
+let psnrCurveDCT = null;
+
+// ────────────────────────────────────────────────
+// DOM references
+// ────────────────────────────────────────────────
+const pixelCanvas = document.getElementById('pixelCanvas');
+const dctCanvas = document.getElementById('dctCanvas');
+const plotCanvas = document.getElementById('plotCanvas');
+const basisCanvas = document.getElementById('basisCanvas');
+const pixelCtx = pixelCanvas.getContext('2d');
+const dctCtx = dctCanvas.getContext('2d');
+const plotCtx = plotCanvas.getContext('2d');
+const basisCtx = basisCanvas.getContext('2d');
+
+const dataSlider = document.getElementById('dataSlider');
+const dataDisplay = document.getElementById('dataDisplay');
+const speedSlider = document.getElementById('speedSlider');
+const speedDisplay = document.getElementById('speedDisplay');
+const playBtn = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+const barFill = document.getElementById('barFill');
+const barLabel = document.getElementById('barLabel');
+
+// ────────────────────────────────────────────────
+// Canvas sizing
+// ────────────────────────────────────────────────
+function sizeCanvas(canvas, ctx) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function resizeAll() {
+  sizeCanvas(pixelCanvas, pixelCtx);
+  sizeCanvas(dctCanvas, dctCtx);
+  sizeCanvas(plotCanvas, plotCtx);
+  sizeCanvas(basisCanvas, basisCtx);
+}
+
+window.addEventListener('resize', () => { resizeAll(); drawAll(); });
+resizeAll();
+
+// ────────────────────────────────────────────────
+// Compute full DCT of image
+// ────────────────────────────────────────────────
+function computeAllDCT() {
+  allDCTCoeffs = new Float64Array(TOTAL_BLOCKS * N * N);
+  const block = new Float64Array(N * N);
+  let bi = 0;
+  for (let by = 0; by < BLOCKS_Y; by++) {
+    for (let bx = 0; bx < BLOCKS_X; bx++) {
+      // Extract block
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          block[r * N + c] = originalPixels[(by * N + r) * IMG_W + (bx * N + c)];
+        }
+      }
+      const coeffs = dct2d(block);
+      allDCTCoeffs.set(coeffs, bi * N * N);
+      bi++;
+    }
+  }
+}
+
+// ────────────────────────────────────────────────
+// Reconstruction: pixel basis
+// ────────────────────────────────────────────────
+function reconstructPixelBasis(percent) {
+  const result = new Float64Array(TOTAL_COEFFS); // starts at 0 (black)
+  const n = Math.floor(percent / 100 * TOTAL_COEFFS);
+  for (let i = 0; i < n; i++) {
+    result[i] = originalPixels[i];
+  }
+  return result;
+}
+
+// ────────────────────────────────────────────────
+// Reconstruction: DCT basis
+// ────────────────────────────────────────────────
+function reconstructDCTBasis(percent) {
+  const n = Math.floor(percent / 100 * TOTAL_COEFFS);
+
+  // Build partial coefficient array
+  const partialCoeffs = new Float64Array(TOTAL_BLOCKS * N * N);
+  for (let i = 0; i < n; i++) {
+    const entry = GLOBAL_ORDER[i];
+    const bi = entry.by * BLOCKS_X + entry.bx;
+    partialCoeffs[bi * N * N + entry.row * N + entry.col] =
+      allDCTCoeffs[bi * N * N + entry.row * N + entry.col];
+  }
+
+  // Inverse DCT each block
+  const result = new Float64Array(TOTAL_COEFFS);
+  const blockCoeffs = new Float64Array(N * N);
+  let bi = 0;
+  for (let by = 0; by < BLOCKS_Y; by++) {
+    for (let bx = 0; bx < BLOCKS_X; bx++) {
+      for (let i = 0; i < N * N; i++) {
+        blockCoeffs[i] = partialCoeffs[bi * N * N + i];
+      }
+      const pixels = idct2d(blockCoeffs);
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          result[(by * N + r) * IMG_W + (bx * N + c)] =
+            Math.max(0, Math.min(255, pixels[r * N + c]));
+        }
+      }
+      bi++;
+    }
+  }
+  return result;
+}
+
+// ────────────────────────────────────────────────
+// Quality metrics
+// ────────────────────────────────────────────────
+function computeMSE(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    const d = a[i] - b[i];
+    sum += d * d;
+  }
+  return sum / a.length;
+}
+
+function mse2psnr(mse) {
+  if (mse === 0) return 99;
+  return 10 * Math.log10(255 * 255 / mse);
+}
+
+function precomputeQualityCurves() {
+  psnrCurvePixel = new Float64Array(101);
+  psnrCurveDCT = new Float64Array(101);
+  for (let p = 0; p <= 100; p++) {
+    const px = reconstructPixelBasis(p);
+    const dct = reconstructDCTBasis(p);
+    psnrCurvePixel[p] = mse2psnr(computeMSE(originalPixels, px));
+    psnrCurveDCT[p] = mse2psnr(computeMSE(originalPixels, dct));
+  }
+}
+
+// ────────────────────────────────────────────────
+// Drawing: image canvases
+// ────────────────────────────────────────────────
+// Offscreen canvases for pixel-level rendering
+const offscreenPixel = document.createElement('canvas');
+offscreenPixel.width = IMG_W;
+offscreenPixel.height = IMG_H;
+const offPixelCtx = offscreenPixel.getContext('2d');
+
+const offscreenDCT = document.createElement('canvas');
+offscreenDCT.width = IMG_W;
+offscreenDCT.height = IMG_H;
+const offDCTCtx = offscreenDCT.getContext('2d');
+
+function drawImageToCanvas(pixels, offCtx, dispCtx, dispCanvas) {
+  const imgData = offCtx.createImageData(IMG_W, IMG_H);
+  for (let i = 0; i < TOTAL_COEFFS; i++) {
+    const v = Math.round(pixels[i]);
+    imgData.data[i * 4] = v;
+    imgData.data[i * 4 + 1] = v;
+    imgData.data[i * 4 + 2] = v;
+    imgData.data[i * 4 + 3] = 255;
+  }
+  offCtx.putImageData(imgData, 0, 0);
+
+  const w = dispCanvas.clientWidth;
+  const h = dispCanvas.clientHeight;
+  dispCtx.imageSmoothingEnabled = false;
+  dispCtx.clearRect(0, 0, w, h);
+  dispCtx.drawImage(offCtx.canvas, 0, 0, IMG_W, IMG_H, 0, 0, w, h);
+}
+
+function drawPixelView() {
+  const pixels = reconstructPixelBasis(dataPercent);
+  drawImageToCanvas(pixels, offPixelCtx, pixelCtx, pixelCanvas);
+
+  // Draw a scanline indicator
+  const n = Math.floor(dataPercent / 100 * TOTAL_COEFFS);
+  const scanY = Math.floor(n / IMG_W);
+  const w = pixelCanvas.clientWidth;
+  const h = pixelCanvas.clientHeight;
+  const scale = h / IMG_H;
+  if (scanY > 0 && scanY < IMG_H) {
+    pixelCtx.strokeStyle = '#f0a050';
+    pixelCtx.lineWidth = 1;
+    pixelCtx.setLineDash([4, 4]);
+    pixelCtx.beginPath();
+    pixelCtx.moveTo(0, scanY * scale);
+    pixelCtx.lineTo(w, scanY * scale);
+    pixelCtx.stroke();
+    pixelCtx.setLineDash([]);
+  }
+}
+
+function drawDCTView() {
+  const pixels = reconstructDCTBasis(dataPercent);
+  drawImageToCanvas(pixels, offDCTCtx, dctCtx, dctCanvas);
+}
+
+// ────────────────────────────────────────────────
+// Drawing: DCT basis functions grid
+// ────────────────────────────────────────────────
+// Precompute basis pattern images (8x8 pixels each) on small offscreen canvases.
+// We render at a fixed resolution and let drawImage scale them up.
+const BASIS_RES = 32; // render each pattern at 32x32 then scale
+const basisPatterns = [];
+{
+  for (let u = 0; u < N; u++) {
+    for (let v = 0; v < N; v++) {
+      const off = document.createElement('canvas');
+      off.width = BASIS_RES;
+      off.height = BASIS_RES;
+      const octx = off.getContext('2d');
+      const img = octx.createImageData(BASIS_RES, BASIS_RES);
+      for (let py = 0; py < BASIS_RES; py++) {
+        for (let px = 0; px < BASIS_RES; px++) {
+          const x = (px + 0.5) / BASIS_RES * N;
+          const y = (py + 0.5) / BASIS_RES * N;
+          const val = Math.cos(Math.PI / N * (x + 0.5) * v) *
+                      Math.cos(Math.PI / N * (y + 0.5) * u);
+          const g = Math.round((val + 1) / 2 * 255);
+          const idx = (py * BASIS_RES + px) * 4;
+          img.data[idx] = g;
+          img.data[idx + 1] = g;
+          img.data[idx + 2] = g;
+          img.data[idx + 3] = 255;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      basisPatterns.push(off);
+    }
+  }
+}
+
+// Precompute zigzag index lookup: zigzagIndexOf[u][v] = position in zigzag scan
+const zigzagIndexOf = Array.from({length: N}, () => new Int32Array(N));
+BLOCK_ZIGZAG.forEach(([r, c], idx) => { zigzagIndexOf[r][c] = idx; });
+
+function drawBasisGrid() {
+  const w = basisCanvas.clientWidth;
+  const h = basisCanvas.clientHeight;
+  basisCtx.clearRect(0, 0, w, h);
+
+  const gap = 2;
+  const cellW = (w - gap) / N;
+  const cellH = (h - gap) / N;
+
+  // Determine which zigzag positions are active
+  const numActive = Math.floor(dataPercent / 100 * TOTAL_COEFFS);
+  const activePositions = Math.floor(numActive / TOTAL_BLOCKS);
+
+  // Background fill for gaps
+  basisCtx.fillStyle = '#0a1628';
+  basisCtx.fillRect(0, 0, w, h);
+
+  for (let u = 0; u < N; u++) {
+    for (let v = 0; v < N; v++) {
+      const cx = gap / 2 + v * cellW;
+      const cy = gap / 2 + u * cellH;
+      const iw = cellW - gap;
+      const ih = cellH - gap;
+
+      // Draw basis pattern using drawImage (respects canvas transform)
+      basisCtx.imageSmoothingEnabled = false;
+      basisCtx.drawImage(basisPatterns[u * N + v], cx, cy, iw, ih);
+
+      // Highlight active coefficients
+      const zigIdx = zigzagIndexOf[u][v];
+      const isActive = zigIdx < activePositions;
+      const isPartial = zigIdx === activePositions &&
+        (numActive % TOTAL_BLOCKS) > 0;
+
+      if (isActive) {
+        basisCtx.strokeStyle = '#4ac0f0';
+        basisCtx.lineWidth = 2;
+        basisCtx.strokeRect(cx, cy, iw, ih);
+      } else if (isPartial) {
+        basisCtx.strokeStyle = 'rgba(74, 192, 240, 0.4)';
+        basisCtx.lineWidth = 1.5;
+        basisCtx.strokeRect(cx, cy, iw, ih);
+      }
+    }
+  }
+}
+
+// ────────────────────────────────────────────────
+// Drawing: PSNR plot
+// ────────────────────────────────────────────────
+function drawPlot() {
+  if (!psnrCurvePixel || !psnrCurveDCT) return;
+
+  const W = plotCanvas.clientWidth;
+  const H = plotCanvas.clientHeight;
+  plotCtx.clearRect(0, 0, W, H);
+
+  const pad = { left: 52, right: 16, top: 16, bottom: 30 };
+  const pw = W - pad.left - pad.right;
+  const ph = H - pad.top - pad.bottom;
+
+  // Find Y range
+  let yMin = 0, yMax = 0;
+  for (let i = 0; i <= 100; i++) {
+    if (psnrCurveDCT[i] < 80) yMax = Math.max(yMax, psnrCurveDCT[i]);
+    if (psnrCurvePixel[i] < 80) yMax = Math.max(yMax, psnrCurvePixel[i]);
+  }
+  yMax = Math.ceil(yMax / 10) * 10 + 5;
+  if (yMax < 40) yMax = 40;
+
+  const toX = p => pad.left + (p / 100) * pw;
+  const toY = v => pad.top + ph - ((v - yMin) / (yMax - yMin)) * ph;
+
+  // Grid
+  plotCtx.strokeStyle = '#1e3450';
+  plotCtx.lineWidth = 0.5;
+  for (let g = 0; g <= yMax; g += 10) {
+    const gy = toY(g);
+    if (gy < pad.top || gy > pad.top + ph) continue;
+    plotCtx.beginPath();
+    plotCtx.moveTo(pad.left, gy);
+    plotCtx.lineTo(pad.left + pw, gy);
+    plotCtx.stroke();
+  }
+  for (let g = 0; g <= 100; g += 20) {
+    plotCtx.beginPath();
+    plotCtx.moveTo(toX(g), pad.top);
+    plotCtx.lineTo(toX(g), pad.top + ph);
+    plotCtx.stroke();
+  }
+
+  // Axes
+  plotCtx.strokeStyle = '#2a4a6a';
+  plotCtx.lineWidth = 1;
+  plotCtx.strokeRect(pad.left, pad.top, pw, ph);
+
+  // Labels
+  plotCtx.fillStyle = '#6a8da8';
+  plotCtx.font = '10px system-ui';
+  plotCtx.textAlign = 'center';
+  for (let g = 0; g <= 100; g += 20) {
+    plotCtx.fillText(g + '%', toX(g), pad.top + ph + 14);
+  }
+  plotCtx.textAlign = 'right';
+  for (let g = 0; g <= yMax; g += 10) {
+    const gy = toY(g);
+    if (gy < pad.top || gy > pad.top + ph) continue;
+    plotCtx.fillText(g + ' dB', pad.left - 5, gy + 3);
+  }
+
+  // Axis titles
+  plotCtx.textAlign = 'center';
+  plotCtx.fillText('Data used', pad.left + pw / 2, H - 2);
+  plotCtx.save();
+  plotCtx.translate(12, pad.top + ph / 2);
+  plotCtx.rotate(-Math.PI / 2);
+  plotCtx.fillText('PSNR (dB)', 0, 0);
+  plotCtx.restore();
+
+  // Curves (clip to plot area)
+  plotCtx.save();
+  plotCtx.beginPath();
+  plotCtx.rect(pad.left, pad.top, pw, ph);
+  plotCtx.clip();
+
+  // Pixel curve
+  plotCtx.strokeStyle = '#f0a050';
+  plotCtx.lineWidth = 2;
+  plotCtx.beginPath();
+  for (let p = 0; p <= 100; p++) {
+    const val = Math.min(psnrCurvePixel[p], 80);
+    const x = toX(p), y = toY(val);
+    p === 0 ? plotCtx.moveTo(x, y) : plotCtx.lineTo(x, y);
+  }
+  plotCtx.stroke();
+
+  // DCT curve
+  plotCtx.strokeStyle = '#4ac0f0';
+  plotCtx.lineWidth = 2;
+  plotCtx.beginPath();
+  for (let p = 0; p <= 100; p++) {
+    const val = Math.min(psnrCurveDCT[p], 80);
+    const x = toX(p), y = toY(val);
+    p === 0 ? plotCtx.moveTo(x, y) : plotCtx.lineTo(x, y);
+  }
+  plotCtx.stroke();
+
+  // Vertical indicator
+  plotCtx.strokeStyle = '#e0e8f0';
+  plotCtx.lineWidth = 1;
+  plotCtx.setLineDash([4, 4]);
+  plotCtx.beginPath();
+  const ix = toX(dataPercent);
+  plotCtx.moveTo(ix, pad.top);
+  plotCtx.lineTo(ix, pad.top + ph);
+  plotCtx.stroke();
+  plotCtx.setLineDash([]);
+
+  plotCtx.restore();
+
+  // Legend
+  const lx = pad.left + 8, ly = pad.top + 10;
+  plotCtx.font = '10px system-ui';
+  plotCtx.fillStyle = '#f0a050';
+  plotCtx.fillRect(lx, ly, 14, 3);
+  plotCtx.fillStyle = '#c0ccd8';
+  plotCtx.textAlign = 'left';
+  plotCtx.fillText('Pixel', lx + 18, ly + 4);
+
+  plotCtx.fillStyle = '#4ac0f0';
+  plotCtx.fillRect(lx, ly + 14, 14, 3);
+  plotCtx.fillStyle = '#c0ccd8';
+  plotCtx.fillText('DCT', lx + 18, ly + 18);
+}
+
+// ────────────────────────────────────────────────
+// Update metrics display
+// ────────────────────────────────────────────────
+function updateMetrics() {
+  const n = Math.floor(dataPercent / 100 * TOTAL_COEFFS);
+  document.getElementById('metCoeffs').textContent =
+    n.toLocaleString() + ' / ' + TOTAL_COEFFS.toLocaleString();
+
+  const p = Math.round(dataPercent);
+  const pIdx = Math.min(p, 100);
+  if (psnrCurvePixel && psnrCurveDCT) {
+    const psnrP = psnrCurvePixel[pIdx];
+    const psnrD = psnrCurveDCT[pIdx];
+    const mseP = psnrP >= 80 ? 0 : 255 * 255 / Math.pow(10, psnrP / 10);
+    const mseD = psnrD >= 80 ? 0 : 255 * 255 / Math.pow(10, psnrD / 10);
+
+    document.getElementById('metMsePixel').textContent = mseP < 1 ? '0.0' : mseP.toFixed(1);
+    document.getElementById('metMseDct').textContent = mseD < 1 ? '0.0' : mseD.toFixed(1);
+    document.getElementById('metPsnrPixel').textContent =
+      psnrP >= 80 ? '> 80 dB' : psnrP.toFixed(1) + ' dB';
+    document.getElementById('metPsnrDct').textContent =
+      psnrD >= 80 ? '> 80 dB' : psnrD.toFixed(1) + ' dB';
+
+    // Cap both at 80 before computing advantage so near-perfect
+    // reconstructions don't produce misleading differences
+    const cappedD = Math.min(psnrD, 80);
+    const cappedP = Math.min(psnrP, 80);
+    const adv = cappedD - cappedP;
+    const advEl = document.getElementById('metAdvantage');
+    advEl.textContent = (adv > 0 ? '+' : '') + adv.toFixed(1) + ' dB';
+    advEl.className = 'metric-val' + (adv > 0 ? ' good' : '');
+  }
+
+  barFill.style.width = dataPercent + '%';
+  barLabel.textContent = dataPercent.toFixed(1) + '% data';
+}
+
+// ────────────────────────────────────────────────
+// Draw everything
+// ────────────────────────────────────────────────
+function drawAll() {
+  drawPixelView();
+  drawDCTView();
+  drawBasisGrid();
+  drawPlot();
+  updateMetrics();
+}
+
+// ────────────────────────────────────────────────
+// Load image and initialise
+// ────────────────────────────────────────────────
+async function loadImage(key) {
+  selectedImage = key;
+  switch (key) {
+    case 'campus': originalPixels = await decodeCampusImage(); break;
+    case 'gradient': originalPixels = generateGradient(); break;
+    case 'checker': originalPixels = generateChecker(); break;
+  }
+  computeAllDCT();
+  precomputeQualityCurves();
+  drawAll();
+}
+
+// ────────────────────────────────────────────────
+// Event handlers
+// ────────────────────────────────────────────────
+dataSlider.addEventListener('input', () => {
+  dataPercent = parseFloat(dataSlider.value);
+  dataDisplay.textContent = dataPercent.toFixed(1) + '%';
+  drawAll();
+});
+
+speedSlider.addEventListener('input', () => {
+  animSpeed = parseFloat(speedSlider.value);
+  speedDisplay.textContent = animSpeed.toFixed(animSpeed % 1 === 0 ? 0 : 2) + 'x';
+});
+
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.textContent = playing ? 'Pause' : 'Play';
+  playBtn.classList.toggle('playing', playing);
+  if (playing && dataPercent >= 100) {
+    dataPercent = 0;
+    dataSlider.value = 0;
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  playing = false;
+  dataPercent = 0;
+  dataSlider.value = 0;
+  dataDisplay.textContent = '0.0%';
+  playBtn.textContent = 'Play';
+  playBtn.classList.remove('playing');
+  drawAll();
+});
+
+// Image selector buttons
+document.querySelectorAll('.img-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.img-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadImage(btn.dataset.img);
+  });
+});
+
+// ────────────────────────────────────────────────
+// Animation loop
+// ────────────────────────────────────────────────
+let lastTime = 0;
+function loop(timestamp) {
+  if (playing) {
+    const dt = lastTime ? (timestamp - lastTime) / 1000 : 0;
+    dataPercent += animSpeed * 10 * dt; // ~10% per second at 1x speed
+    if (dataPercent >= 100) {
+      dataPercent = 100;
+      playing = false;
+      playBtn.textContent = 'Play';
+      playBtn.classList.remove('playing');
+    }
+    dataSlider.value = dataPercent;
+    dataDisplay.textContent = dataPercent.toFixed(1) + '%';
+    drawAll();
+  }
+  lastTime = timestamp;
+  requestAnimationFrame(loop);
+}
+
+// ────────────────────────────────────────────────
+// Init
+// ────────────────────────────────────────────────
+loadImage('campus').then(() => requestAnimationFrame(loop));
+</script>
+</body>
+</html>
