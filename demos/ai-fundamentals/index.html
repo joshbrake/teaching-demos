@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Fundamentals: From Models to Agents</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628; color: #e0e8f0;
+    overflow-x: hidden; min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  /* Header */
+  header {
+    text-align: center; padding: 18px 16px 8px;
+  }
+  h1 { font-size: 1.5rem; color: #7ec8f0; margin-bottom: 2px; }
+  .subtitle { color: #6a8da8; font-size: 0.88rem; margin-bottom: 6px; }
+
+  /* Step indicator dots */
+  .step-dots {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .step-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #1e3450; border: 2px solid #2a4a6a;
+    cursor: pointer; transition: all 0.2s;
+    position: relative;
+  }
+  .step-dot:hover { border-color: #4a9ece; }
+  .step-dot.active { background: #4a9ece; border-color: #7ec8f0; }
+  .step-dot.visited { background: #2a5a80; border-color: #4a9ece; }
+  .step-dot-label {
+    display: none; position: absolute; top: -28px; left: 50%;
+    transform: translateX(-50%); white-space: nowrap;
+    font-size: 0.68rem; color: #8ab4d0; background: #162840;
+    padding: 2px 8px; border-radius: 4px; pointer-events: none;
+    border: 1px solid #2a4a6a;
+  }
+  .step-dot:hover .step-dot-label { display: block; }
+
+  /* Act label */
+  .act-label {
+    text-align: center; font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 2px; color: #5a9cc0; margin-bottom: 10px;
+  }
+
+  /* Main content area */
+  .main {
+    flex: 1; display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 12px;
+    max-width: 1200px; width: 100%;
+    margin: 0 auto; padding: 0 16px;
+  }
+
+  /* Explanation panel (left) */
+  .explain-panel {
+    background: #111e30; border: 1px solid #1e3450;
+    border-radius: 10px; padding: 20px;
+    overflow-y: auto; max-height: calc(100vh - 180px);
+  }
+  .explain-panel h2 {
+    font-size: 1.3rem; color: #7ec8f0; margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .analogy-box {
+    background: #162840; border-left: 3px solid #4a9ece;
+    border-radius: 0 8px 8px 0; padding: 12px 14px;
+    margin-bottom: 16px; font-size: 0.88rem;
+    color: #b0d0e8; line-height: 1.55;
+  }
+  .analogy-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #5a9cc0; margin-bottom: 4px; font-weight: 700;
+  }
+  .explain-text {
+    font-size: 0.9rem; color: #c0d8e8; line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .explain-text p { margin-bottom: 10px; }
+  .takeaway-box {
+    background: #1a3020; border: 1px solid #2a6a3a;
+    border-radius: 8px; padding: 12px 14px;
+    font-size: 0.85rem; color: #80d8a0; line-height: 1.5;
+  }
+  .takeaway-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #60b880; margin-bottom: 4px; font-weight: 700;
+  }
+
+  /* Visualization panel (right) */
+  .viz-panel {
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 0;
+  }
+  .viz-canvas-wrap {
+    flex: 1; background: #111e30; border: 1px solid #1e3450;
+    border-radius: 10px; padding: 12px;
+    display: flex; flex-direction: column;
+    min-height: 300px;
+  }
+  .viz-canvas-wrap h3 {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: #5a9cc0; margin-bottom: 8px;
+  }
+  .viz-canvas-wrap canvas {
+    flex: 1; width: 100%; border-radius: 6px;
+    cursor: default;
+  }
+  #modelCanvas { cursor: crosshair; }
+  #predCanvas { cursor: pointer; }
+
+  /* Controls below viz */
+  .viz-controls {
+    background: #111e30; border: 1px solid #1e3450;
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .viz-controls h3 {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: #5a9cc0; margin-bottom: 8px;
+  }
+
+  /* Shared control styles */
+  .slider-group { margin-bottom: 10px; }
+  .slider-group:last-child { margin-bottom: 0; }
+  .slider-group label {
+    display: block; font-size: 0.78rem; color: #8ab4d0; margin-bottom: 3px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type="range"] { flex: 1; }
+  .slider-val {
+    font-family: 'Courier New', monospace; font-size: 0.82rem;
+    color: #7ec8f0; min-width: 42px; text-align: right;
+  }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px; background: #1e3450; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #4a9ece; border: 2px solid #7ec8f0; cursor: pointer;
+  }
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  button {
+    padding: 7px 14px; font-size: 0.8rem; border-radius: 6px;
+    border: 1px solid #2a4a6a; background: #162840; color: #7ec8f0;
+    cursor: pointer; transition: background 0.15s;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  button:hover { background: #1e3a58; }
+  button.active { background: #2a5a80; border-color: #4a9ece; }
+  button.go-btn { background: #1a4028; color: #60d080; border-color: #2a6a3a; }
+  button.go-btn:hover { background: #245a38; }
+
+  /* Step containers */
+  .step-container { display: none; }
+  .step-container.active { display: contents; }
+
+  /* Navigation bar */
+  .nav-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1200px; width: 100%;
+    margin: 12px auto 16px; padding: 0 16px;
+  }
+  .nav-btn {
+    padding: 10px 24px; font-size: 0.9rem; border-radius: 8px;
+    border: 1px solid #2a4a6a; background: #162840; color: #7ec8f0;
+    cursor: pointer; transition: all 0.15s;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  .nav-btn:hover { background: #1e3a58; border-color: #4a9ece; }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav-btn.next { background: #1a3050; border-color: #3a7aaa; }
+  .nav-btn.next:hover { background: #2a4a70; }
+  .step-counter {
+    font-size: 0.82rem; color: #6a8da8;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Token chips (Step 2) */
+  .token-input {
+    width: 100%; padding: 10px 12px; font-size: 0.95rem;
+    background: #0d1a2a; border: 1px solid #2a4a6a; border-radius: 8px;
+    color: #e0e8f0; outline: none; font-family: 'Segoe UI', system-ui, sans-serif;
+    margin-bottom: 12px;
+  }
+  .token-input:focus { border-color: #4a9ece; }
+  .token-display {
+    display: flex; flex-wrap: wrap; gap: 4px; padding: 12px;
+    background: #0d1a2a; border-radius: 8px; min-height: 60px;
+    border: 1px solid #1e3450;
+  }
+  .token-chip {
+    display: inline-block; padding: 4px 8px; border-radius: 4px;
+    font-size: 0.85rem; font-family: 'Courier New', monospace;
+    line-height: 1.4; cursor: default; transition: transform 0.1s;
+  }
+  .token-chip:hover { transform: scale(1.05); }
+  .token-count {
+    font-size: 0.82rem; color: #6a8da8; margin-top: 8px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* Sentence display (Step 3) */
+  .sentence-display {
+    display: flex; flex-wrap: wrap; gap: 4px; padding: 14px;
+    background: #0d1a2a; border-radius: 8px; min-height: 48px;
+    border: 1px solid #1e3450; margin-bottom: 12px;
+    font-size: 1rem; line-height: 1.6;
+  }
+  .sentence-token {
+    display: inline-block; padding: 2px 6px; border-radius: 4px;
+    color: #c0d8e8; transition: background 0.15s;
+  }
+  .sentence-token.new { background: #2a5a30; color: #80e8a0; }
+
+  /* Attention display (Step 5) */
+  .attention-sentence {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 16px;
+    background: #0d1a2a; border-radius: 8px; min-height: 50px;
+    border: 1px solid #1e3450; margin-bottom: 4px;
+    justify-content: center;
+  }
+  .att-token {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 6px 12px; border-radius: 6px; font-size: 0.95rem;
+    background: #162840; border: 1px solid #2a4a6a;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+  }
+  .att-token:hover { border-color: #4a9ece; background: #1e3a58; }
+  .att-token.selected { background: #2a5a80; border-color: #7ec8f0; color: #fff; }
+  .att-token.highlighted {
+    border-color: #4a9ece;
+  }
+
+  /* Agent loop (Step 6) */
+  .agent-transcript {
+    max-height: 240px; overflow-y: auto; padding: 10px;
+    background: #0d1a2a; border: 1px solid #1e3450; border-radius: 8px;
+    font-size: 0.82rem; line-height: 1.6;
+  }
+  .transcript-entry { margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; }
+  .transcript-observe { background: #1a2a40; border-left: 3px solid #4a9ece; }
+  .transcript-think { background: #2a2a1a; border-left: 3px solid #d0b040; }
+  .transcript-act { background: #1a3020; border-left: 3px solid #60d080; }
+  .phase-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px;
+    font-weight: 700; margin-bottom: 2px;
+  }
+
+  /* Tool panel (Step 7) */
+  .tool-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    margin-bottom: 12px;
+  }
+  .tool-card {
+    background: #162840; border: 1px solid #2a4a6a; border-radius: 8px;
+    padding: 10px; text-align: center; transition: all 0.2s;
+  }
+  .tool-card.active-tool {
+    border-color: #60d080; background: #1a3828;
+    box-shadow: 0 0 12px rgba(96, 208, 128, 0.2);
+  }
+  .tool-icon { font-size: 1.5rem; margin-bottom: 4px; }
+  .tool-name { font-size: 0.75rem; color: #8ab4d0; text-transform: uppercase; letter-spacing: 1px; }
+  .tool-result {
+    background: #0d1a2a; border: 1px solid #1e3450; border-radius: 8px;
+    padding: 12px; font-family: 'Courier New', monospace;
+    font-size: 0.85rem; min-height: 80px; line-height: 1.5;
+    overflow-wrap: break-word; word-break: break-word;
+  }
+
+  /* Scrollbar styling for explain panel */
+  .explain-panel::-webkit-scrollbar { width: 6px; }
+  .explain-panel::-webkit-scrollbar-track { background: transparent; }
+  .explain-panel::-webkit-scrollbar-thumb { background: #2a4a6a; border-radius: 3px; }
+  .explain-panel::-webkit-scrollbar-thumb:hover { background: #3a6a8a; }
+
+  /* Disabled button states */
+  .nav-btn:disabled:hover { background: #162840; border-color: #2a4a6a; }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; gap: 10px; }
+    .explain-panel { max-height: none; }
+    .viz-canvas-wrap { min-height: 250px; }
+    .nav-bar { padding: 0 12px; }
+    .agent-transcript { max-height: 180px; }
+  }
+  @media (max-width: 600px) {
+    .main { padding: 0 10px; }
+    .viz-canvas-wrap { min-height: 200px; }
+    .explain-panel { padding: 16px; }
+    .analogy-box { font-size: 0.84rem; padding: 10px 12px; }
+    .explain-text { font-size: 0.86rem; }
+    button { min-height: 40px; }
+    .nav-btn { min-height: 44px; }
+    .agent-transcript { max-height: 150px; }
+    .tool-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .tool-card { padding: 8px 4px; }
+    .tool-icon { font-size: 1.2rem; }
+    .tool-name { font-size: 0.65rem; }
+  }
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    header { padding: 12px 12px 6px; }
+    h1 { font-size: 1.2rem; }
+    .main { padding: 0 8px; }
+    .explain-panel { padding: 14px; }
+    .explain-panel h2 { font-size: 1.1rem; }
+    .nav-btn { padding: 8px 16px; font-size: 0.85rem; min-height: 44px; }
+    .viz-canvas-wrap { min-height: 180px; }
+    .step-dot { width: 10px; height: 10px; }
+    .step-dots { gap: 6px; }
+    .att-token { padding: 5px 8px; font-size: 0.85rem; }
+    .attention-sentence { gap: 4px; padding: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AI Fundamentals: From Models to Agents</h1>
+  <p class="subtitle">An interactive walkthrough of core AI concepts</p>
+  <div class="step-dots" id="stepDots"></div>
+  <div class="act-label" id="actLabel"></div>
+</header>
+
+<!-- Step 1: What Is a Model? -->
+<div class="step-container" data-step="0">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>What Is a Model?</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        A model is like an experienced home appraiser. Show them a house &mdash; its square footage, number of bedrooms, neighborhood &mdash; and they'll predict a price. They learned by studying thousands of past sales. A machine learning model works the same way: it finds patterns in data to make predictions about new inputs.
+      </div>
+      <div class="explain-text">
+        <p>At its core, a <strong>model</strong> is a function that maps inputs to outputs. You give it data (like house size), and it gives you a prediction (like price).</p>
+        <p>The model learns this mapping by being shown many examples. A simple model (like a straight line) captures broad trends. A complex model (like a wiggly curve) can capture more detail &mdash; but it risks <strong>overfitting</strong>, memorizing noise instead of learning the real pattern.</p>
+        <p><strong>Try it:</strong> Click on the plot to add data points. Toggle between fit types to see how complexity changes the curve. Watch what happens when you crank up the degree slider.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        All of AI comes down to this: learning a function from data. The art is choosing the right model complexity &mdash; simple enough to generalize, complex enough to be useful.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap">
+        <h3>Curve Fitting</h3>
+        <canvas id="modelCanvas"></canvas>
+      </div>
+      <div class="viz-controls">
+        <div class="btn-row" style="margin-bottom: 10px;">
+          <button class="active" data-fit="linear">Linear</button>
+          <button data-fit="poly">Polynomial</button>
+          <button data-fit="overfit">Overfit</button>
+          <button style="margin-left:auto;" id="modelClear">Clear</button>
+        </div>
+        <div class="slider-group" id="degreeGroup" style="display:none;">
+          <label>Polynomial Degree <span class="slider-val" id="degreeVal">3</span></label>
+          <div class="slider-row">
+            <input type="range" id="degreeSlider" min="1" max="12" step="1" value="3">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: Tokens & Text -->
+<div class="step-container" data-step="1">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>Tokens & Text</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        You read words. LLMs read <strong>tokens</strong> &mdash; fragments of words, like puzzle pieces. The word "unbelievable" might become three tokens: "un", "believ", "able". Common words stay whole; rare words get split. It's like Morse code: common letters get short signals (E = dot), rare ones get long.
+      </div>
+      <div class="explain-text">
+        <p>Before a language model can process text, it must convert it into <strong>tokens</strong> &mdash; numerical IDs from a fixed vocabulary.</p>
+        <p>This process, called <strong>tokenization</strong>, splits text into subword pieces. Common words like "the" are a single token. Rare or long words get broken into smaller chunks. Even punctuation and spaces become tokens.</p>
+        <p><strong>Try it:</strong> Type anything in the input box and watch it get tokenized in real time. Try names, code, or long words to see how they split.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        LLMs don't think in words &mdash; they think in tokens. This is why they sometimes struggle with spelling, counting letters, or handling rare words: the boundaries don't align with how we think about text.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap" style="flex:none;">
+        <h3>Tokenizer</h3>
+        <input type="text" class="token-input" id="tokenInput" placeholder="Type something..." value="The quick brown fox jumps over the lazy dog">
+        <div class="token-display" id="tokenDisplay"></div>
+        <div class="token-count" id="tokenCount"></div>
+      </div>
+      <div class="viz-controls">
+        <h3>Examples</h3>
+        <div class="btn-row">
+          <button data-example="Hello world! How are you today?">Simple</button>
+          <button data-example="Antidisestablishmentarianism is a long word">Long Word</button>
+          <button data-example="def fibonacci(n):\n  return n if n < 2 else fibonacci(n-1) + fibonacci(n-2)">Code</button>
+          <button data-example="The transformer architecture revolutionized natural language processing">Technical</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 3: Next-Token Prediction -->
+<div class="step-container" data-step="2">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>Next-Token Prediction</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        You know how your phone suggests the next word as you type? An LLM does the same thing &mdash; but after reading essentially the entire internet. For every position, it builds a probability distribution over all possible next tokens. It's the world's most sophisticated autocomplete.
+      </div>
+      <div class="explain-text">
+        <p>The core operation of a language model is simple: given a sequence of tokens, predict what comes next.</p>
+        <p>The model doesn't just pick one answer &mdash; it assigns a <strong>probability</strong> to every possible next token. "The cat sat on the..." might give high probability to "mat", "floor", "couch", and lower probability to "elephant" or "spacecraft".</p>
+        <p><strong>Try it:</strong> Click on a probability bar to choose that token. It gets appended, and new probabilities appear. Use "Auto" to let the model pick the most likely token automatically.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        Generation is just repeated prediction. The model predicts one token, appends it, then predicts the next. The entire output is built one piece at a time &mdash; the model never "sees" the full response in advance.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap">
+        <h3>Probability of Next Token</h3>
+        <div class="sentence-display" id="sentenceDisplay"></div>
+        <canvas id="predCanvas"></canvas>
+      </div>
+      <div class="viz-controls">
+        <div class="btn-row" style="margin-bottom:10px;">
+          <button class="go-btn" id="autoComplete">Auto</button>
+          <button id="predReset">Reset</button>
+        </div>
+        <h3>Prompts</h3>
+        <div class="btn-row">
+          <button data-prompt="0">The cat sat on</button>
+          <button data-prompt="1">Once upon a</button>
+          <button data-prompt="2">The capital of</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 4: Temperature & Sampling -->
+<div class="step-container" data-step="3">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>Temperature & Sampling</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        Temperature controls how adventurous the model is. <strong>Low temperature</strong> (0.0) is like always ordering your favorite dish &mdash; safe, predictable. <strong>High temperature</strong> (1.5) is like telling the chef to surprise you &mdash; you might get something amazing or something weird. <strong>Temperature 1.0</strong> is the model's natural confidence.
+      </div>
+      <div class="explain-text">
+        <p>The raw model produces <strong>logits</strong> (scores) for each token. Temperature rescales these before converting to probabilities:</p>
+        <p style="text-align:center; font-family:'Courier New',monospace; color:#7ec8f0; margin:8px 0;">p(token) = exp(logit / T) / sum(exp(logits / T))</p>
+        <p>Low T sharpens the distribution (one token dominates). High T flattens it (more tokens become likely). This single parameter controls the creativity-reliability tradeoff.</p>
+        <p><strong>Try it:</strong> Drag the temperature slider and watch the bars reshape. Then click "Sample 100" to see which tokens actually get picked at different temperatures.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        Temperature doesn't change what the model "knows" &mdash; it changes how it chooses. T=0 always picks the most likely token. Higher T lets less-likely tokens through, producing more diverse (but potentially less coherent) output.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap">
+        <h3>Token Probabilities</h3>
+        <canvas id="tempCanvas"></canvas>
+      </div>
+      <div class="viz-controls">
+        <div class="slider-group" style="margin-bottom:10px;">
+          <label>Temperature <span class="slider-val" id="tempVal">1.00</span></label>
+          <div class="slider-row">
+            <input type="range" id="tempSlider" min="0.05" max="2.0" step="0.05" value="1.0">
+          </div>
+        </div>
+        <div class="btn-row" style="margin-bottom:10px;">
+          <button id="sample1">Sample 1</button>
+          <button class="go-btn" id="sample100">Sample 100</button>
+          <button id="sampleReset">Clear Histogram</button>
+        </div>
+        <h3>Context</h3>
+        <div class="btn-row">
+          <button class="active" data-dist="confident">Confident</button>
+          <button data-dist="ambiguous">Ambiguous</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 5: Attention -->
+<div class="step-container" data-step="4">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>Attention</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        When you read "The cat sat on the mat because <strong>it</strong> was tired," you instantly know "it" refers to "the cat" &mdash; not "the mat." Your brain looks back and connects the pronoun to the right noun. <strong>Attention</strong> is the mechanism that lets a model do the same thing: for every token, it decides which other tokens matter most.
+      </div>
+      <div class="explain-text">
+        <p>Attention is the key innovation in the <strong>Transformer</strong> architecture (the "T" in GPT). Each token computes a weighted average over all other tokens, where the weights reflect relevance.</p>
+        <p>This is how models handle long-range dependencies &mdash; a token near the end of a paragraph can "look back" at a token from the beginning if it's relevant.</p>
+        <p><strong>Try it:</strong> Click on any token to see which other tokens it attends to. Thicker, brighter arcs mean stronger attention. Try different sentences to see different patterns.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        Attention lets models figure out context dynamically. Instead of processing text in a fixed window, each token can selectively focus on whichever other tokens are most relevant &mdash; no matter how far away they are.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap" style="flex:none;">
+        <h3>Attention Weights</h3>
+        <div class="attention-sentence" id="attSentence"></div>
+        <canvas id="attCanvas" style="height:200px;"></canvas>
+      </div>
+      <div class="viz-controls">
+        <h3>Sentences</h3>
+        <div class="btn-row">
+          <button class="active" data-att="0">Pronoun</button>
+          <button data-att="1">Factual</button>
+          <button data-att="2">Semantic</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 6: From Chat to Agents -->
+<div class="step-container" data-step="5">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>From Chat to Agents</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        A <strong>chatbot</strong> is like a friend who answers questions. An <strong>agent</strong> is like a personal assistant who solves problems. Ask a chatbot "What's the weather?" and it gives information. Ask an agent "Should I bring an umbrella?" and it checks the weather, looks at your calendar, sees you have an outdoor meeting at 2pm, and says "Yes, bring one."
+      </div>
+      <div class="explain-text">
+        <p>The key shift from chatbot to agent is the <strong>loop</strong>. A chatbot takes one input and produces one output. An agent runs a cycle:</p>
+        <p><strong>Observe</strong> &rarr; gather information<br>
+           <strong>Think</strong> &rarr; reason about what to do next<br>
+           <strong>Act</strong> &rarr; take an action (call a tool, send a message)<br>
+           &hellip; then observe the result and repeat.</p>
+        <p><strong>Try it:</strong> Click "Step" to walk through each phase of the agent loop, or "Auto-play" to watch it unfold. The transcript below shows the agent's thinking in real time.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        An agent is a model in a loop. The model itself doesn't change &mdash; it's still doing next-token prediction. But by wrapping it in an observe-think-act cycle with access to tools, it can solve multi-step problems autonomously.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap" style="min-height:220px;">
+        <h3>The Agent Loop</h3>
+        <canvas id="loopCanvas"></canvas>
+      </div>
+      <div class="viz-canvas-wrap" style="flex:1; min-height:180px;">
+        <h3>Transcript</h3>
+        <div class="agent-transcript" id="agentTranscript"></div>
+      </div>
+      <div class="viz-controls">
+        <div class="btn-row" style="margin-bottom:10px;">
+          <button class="go-btn" id="agentStep">Step</button>
+          <button id="agentAuto">Auto-play</button>
+          <button id="agentReset">Reset</button>
+        </div>
+        <h3>Scenarios</h3>
+        <div class="btn-row">
+          <button class="active" data-scenario="0">Travel</button>
+          <button data-scenario="1">Research</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 7: Tool Use -->
+<div class="step-container" data-step="6">
+  <div class="main">
+    <div class="explain-panel">
+      <h2>Tool Use</h2>
+      <div class="analogy-box">
+        <div class="analogy-label">Analogy</div>
+        An LLM by itself is like a brilliant thinker locked in a room with no phone, no computer, no calculator. It can reason impressively, but it can't check facts or take real actions. <strong>Tools</strong> give the agent hands: a calculator for math, a search engine for current info, a code runner for computation. The agent decides which tool to use, calls it, and incorporates the result.
+      </div>
+      <div class="explain-text">
+        <p>Tool use is what makes agents practical. The model generates a <strong>structured tool call</strong> (like a function call), the system executes it, and the result gets fed back to the model.</p>
+        <p>This is powerful because the model can reason about <em>when</em> to use a tool, <em>which</em> tool to use, and <em>how to interpret</em> the result &mdash; combining the model's reasoning with the tool's capabilities.</p>
+        <p><strong>Try it:</strong> Click "Next Task" to see the agent solve different problems by choosing the right tool. Watch how it reasons about which tool is appropriate.</p>
+      </div>
+      <div class="takeaway-box">
+        <div class="takeaway-label">Key Takeaway</div>
+        Tools extend what AI can do from "thinking" to "doing." A model with tools can browse the web, write and run code, query databases, send messages &mdash; anything you can define as a function. This is the foundation of agentic AI.
+      </div>
+    </div>
+    <div class="viz-panel">
+      <div class="viz-canvas-wrap" style="flex:none;">
+        <h3>Available Tools</h3>
+        <div class="tool-grid" id="toolGrid">
+          <div class="tool-card" data-tool="calculator"><div class="tool-icon">&#x1F5A9;</div><div class="tool-name">Calculator</div></div>
+          <div class="tool-card" data-tool="search"><div class="tool-icon">&#x1F50D;</div><div class="tool-name">Web Search</div></div>
+          <div class="tool-card" data-tool="code"><div class="tool-icon">&#x2318;</div><div class="tool-name">Code Runner</div></div>
+          <div class="tool-card" data-tool="file"><div class="tool-icon">&#x1F4C4;</div><div class="tool-name">File Writer</div></div>
+        </div>
+      </div>
+      <div class="viz-canvas-wrap" style="flex:1; min-height:180px;">
+        <h3>Agent Reasoning</h3>
+        <div class="tool-result" id="toolResult">
+          <span style="color:#6a8da8;">Click "Next Task" to begin...</span>
+        </div>
+      </div>
+      <div class="viz-controls">
+        <div class="btn-row">
+          <button class="go-btn" id="toolNext">Next Task</button>
+          <button id="toolReset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav-bar">
+  <button class="nav-btn prev" id="prevBtn">&larr; Previous</button>
+  <span class="step-counter" id="stepCounter">1 / 7</span>
+  <button class="nav-btn next" id="nextBtn">Next &rarr;</button>
+</div>
+
+<script>
+// ============================================================
+// NAVIGATION CONTROLLER
+// ============================================================
+
+const STEP_TITLES = [
+  'What Is a Model?', 'Tokens & Text', 'Next-Token Prediction',
+  'Temperature & Sampling', 'Attention', 'From Chat to Agents', 'Tool Use'
+];
+const ACT_LABELS = [
+  'Act I: How Language Models Work', 'Act I: How Language Models Work',
+  'Act I: How Language Models Work', 'Act I: How Language Models Work',
+  'Act II: From Models to Agents', 'Act II: From Models to Agents',
+  'Act II: From Models to Agents'
+];
+
+let currentStep = 0;
+const visited = new Set([0]);
+const stepContainers = document.querySelectorAll('.step-container');
+const dotsContainer = document.getElementById('stepDots');
+const actLabel = document.getElementById('actLabel');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const stepCounter = document.getElementById('stepCounter');
+
+// Create dots
+STEP_TITLES.forEach((title, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'step-dot' + (i === 0 ? ' active' : '');
+  dot.innerHTML = `<span class="step-dot-label">${title}</span>`;
+  dot.addEventListener('click', () => goToStep(i));
+  dotsContainer.appendChild(dot);
+});
+
+function goToStep(idx) {
+  if (idx < 0 || idx >= STEP_TITLES.length) return;
+  // Leave current step
+  if (STEPS[currentStep] && STEPS[currentStep].leave) STEPS[currentStep].leave();
+  stepContainers[currentStep].classList.remove('active');
+  dotsContainer.children[currentStep].classList.remove('active');
+  if (visited.has(currentStep)) dotsContainer.children[currentStep].classList.add('visited');
+
+  currentStep = idx;
+  visited.add(idx);
+
+  // Enter new step
+  stepContainers[currentStep].classList.add('active');
+  dotsContainer.children[currentStep].classList.remove('visited');
+  dotsContainer.children[currentStep].classList.add('active');
+  actLabel.textContent = ACT_LABELS[currentStep];
+  stepCounter.textContent = `${currentStep + 1} / ${STEP_TITLES.length}`;
+  prevBtn.disabled = currentStep === 0;
+  nextBtn.disabled = currentStep === STEP_TITLES.length - 1;
+
+  if (STEPS[currentStep] && STEPS[currentStep].enter) STEPS[currentStep].enter();
+}
+
+prevBtn.addEventListener('click', () => goToStep(currentStep - 1));
+nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goToStep(currentStep + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goToStep(currentStep - 1); }
+});
+
+// ============================================================
+// STEP REGISTRY
+// ============================================================
+const STEPS = [];
+
+// ============================================================
+// STEP 1: WHAT IS A MODEL?
+// ============================================================
+(function() {
+  const canvas = document.getElementById('modelCanvas');
+  const ctx = canvas.getContext('2d');
+  let points = [];
+  let fitType = 'linear';
+  let polyDegree = 3;
+  let W, H;
+
+  // Default points
+  const defaultPoints = [
+    [0.1, 0.8], [0.15, 0.72], [0.25, 0.6], [0.3, 0.55], [0.4, 0.45],
+    [0.45, 0.48], [0.55, 0.3], [0.6, 0.35], [0.7, 0.2], [0.75, 0.18],
+    [0.8, 0.22], [0.9, 0.1], [0.95, 0.08]
+  ];
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function toPixel(px, py) {
+    const mx = 40, my = 30;
+    return [mx + px * (W - mx - 20), my + py * (H - my - 35)];
+  }
+  function fromPixel(cx, cy) {
+    const mx = 40, my = 30;
+    return [(cx - mx) / (W - mx - 20), (cy - my) / (H - my - 35)];
+  }
+
+  // Polynomial regression using normal equations
+  function polyFit(pts, degree) {
+    const n = pts.length;
+    if (n < degree + 1) return null;
+    // Build Vandermonde matrix
+    const X = pts.map(p => {
+      const row = [];
+      for (let d = 0; d <= degree; d++) row.push(Math.pow(p[0], d));
+      return row;
+    });
+    const y = pts.map(p => p[1]);
+    // X^T * X
+    const cols = degree + 1;
+    const XtX = Array.from({length: cols}, () => new Float64Array(cols));
+    const Xty = new Float64Array(cols);
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < cols; j++) {
+        let s = 0;
+        for (let k = 0; k < n; k++) s += X[k][i] * X[k][j];
+        XtX[i][j] = s;
+      }
+      let s = 0;
+      for (let k = 0; k < n; k++) s += X[k][i] * y[k];
+      Xty[i] = s;
+    }
+    // Gaussian elimination
+    const A = XtX.map((row, i) => [...row, Xty[i]]);
+    for (let i = 0; i < cols; i++) {
+      let max = i;
+      for (let k = i + 1; k < cols; k++) if (Math.abs(A[k][i]) > Math.abs(A[max][i])) max = k;
+      [A[i], A[max]] = [A[max], A[i]];
+      if (Math.abs(A[i][i]) < 1e-12) return null;
+      for (let k = i + 1; k < cols; k++) {
+        const f = A[k][i] / A[i][i];
+        for (let j = i; j <= cols; j++) A[k][j] -= f * A[i][j];
+      }
+    }
+    const coeffs = new Float64Array(cols);
+    for (let i = cols - 1; i >= 0; i--) {
+      coeffs[i] = A[i][cols];
+      for (let j = i + 1; j < cols; j++) coeffs[i] -= A[i][j] * coeffs[j];
+      coeffs[i] /= A[i][i];
+    }
+    return coeffs;
+  }
+
+  function evalPoly(coeffs, x) {
+    let y = 0;
+    for (let i = 0; i < coeffs.length; i++) y += coeffs[i] * Math.pow(x, i);
+    return y;
+  }
+
+  // Lagrange interpolation — numerically stable for high-degree fitting
+  function lagrangeEval(pts, x) {
+    let result = 0;
+    for (let i = 0; i < pts.length; i++) {
+      let basis = pts[i][1];
+      for (let j = 0; j < pts.length; j++) {
+        if (j !== i) basis *= (x - pts[j][0]) / (pts[i][0] - pts[j][0]);
+      }
+      result += basis;
+    }
+    return result;
+  }
+
+  function computeLoss(pts, evalFn) {
+    if (pts.length === 0) return 0;
+    let sum = 0;
+    for (const p of pts) { const err = p[1] - evalFn(p[0]); sum += err * err; }
+    return sum / pts.length;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const mx = 40, my = 30, mxr = 20, myb = 35;
+    const pw = W - mx - mxr, ph = H - my - myb;
+
+    // Grid
+    ctx.strokeStyle = '#1e3450'; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const x = mx + (pw * i / 4);
+      ctx.beginPath(); ctx.moveTo(x, my); ctx.lineTo(x, my + ph); ctx.stroke();
+      const y = my + (ph * i / 4);
+      ctx.beginPath(); ctx.moveTo(mx, y); ctx.lineTo(mx + pw, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#2a4a6a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(mx, my + ph); ctx.lineTo(mx + pw, my + ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, my + ph); ctx.stroke();
+    ctx.fillStyle = '#6a8da8'; ctx.font = '11px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Input (x)', mx + pw / 2, H - 4);
+    ctx.save(); ctx.translate(12, my + ph / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Output (y)', 0, 0); ctx.restore();
+
+    // Fit curve
+    const pts = points;
+    if (pts.length >= 2) {
+      const useOverfit = fitType === 'overfit';
+      let evalFn;
+      let degree;
+
+      if (useOverfit) {
+        // Lagrange interpolation: passes through every point (overfits perfectly)
+        evalFn = (x) => lagrangeEval(pts, x);
+      } else {
+        degree = fitType === 'linear' ? 1 : polyDegree;
+        const coeffs = polyFit(pts, Math.min(degree, pts.length - 1));
+        if (!coeffs) { drawPoints(pts); return; }
+        evalFn = (x) => evalPoly(coeffs, x);
+      }
+
+      const colors = { linear: '#4a9ece', poly: '#f0a050', overfit: '#f06060' };
+      ctx.strokeStyle = colors[fitType] || '#4a9ece';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      let first = true;
+      for (let px = 0; px <= 1; px += 0.002) {
+        const py = evalFn(px);
+        // Clamp to prevent wild curves from escaping the canvas too far
+        const clampedPy = Math.max(-1, Math.min(2, py));
+        const [sx, sy] = toPixel(px, clampedPy);
+        if (first) { ctx.moveTo(sx, sy); first = false; } else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+
+      // Loss
+      const loss = computeLoss(pts, evalFn);
+      ctx.fillStyle = '#6a8da8'; ctx.font = '11px Courier New, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`MSE: ${loss.toFixed(6)}`, W - 10, H - 8);
+
+      // Degree / fit info label
+      ctx.fillStyle = '#5a9cc0'; ctx.font = '10px Courier New, monospace';
+      ctx.textAlign = 'left';
+      if (useOverfit) {
+        ctx.fillText(`degree: ${pts.length - 1} (interpolating ${pts.length} points)`, mx + 4, H - 8);
+      } else {
+        ctx.fillText(`degree: ${fitType === 'linear' ? 1 : polyDegree}`, mx + 4, H - 8);
+      }
+    }
+
+    drawPoints(pts);
+  }
+
+  function drawPoints(pts) {
+
+    // Empty state
+    if (pts.length === 0) {
+      ctx.fillStyle = '#4a6a8a'; ctx.font = '14px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click to add data points', W / 2, H / 2);
+      return;
+    }
+    for (const p of pts) {
+      const [sx, sy] = toPixel(p[0], p[1]);
+      ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#7ec8f0'; ctx.fill();
+      ctx.strokeStyle = '#b0e0ff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  }
+
+  // Click to add points
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    const [px, py] = fromPixel(cx, cy);
+    if (px >= -0.05 && px <= 1.05 && py >= -0.05 && py <= 1.05) {
+      points.push([Math.max(0, Math.min(1, px)), Math.max(0, Math.min(1, py))]);
+      draw();
+    }
+  });
+
+  // Fit type buttons
+  const degreeGroup = document.getElementById('degreeGroup');
+  document.querySelectorAll('[data-fit]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-fit]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      fitType = btn.dataset.fit;
+      degreeGroup.style.display = fitType === 'poly' ? '' : 'none';
+      draw();
+    });
+  });
+
+  // Degree slider
+  const degreeSlider = document.getElementById('degreeSlider');
+  const degreeVal = document.getElementById('degreeVal');
+  degreeSlider.addEventListener('input', () => {
+    polyDegree = parseInt(degreeSlider.value);
+    degreeVal.textContent = polyDegree;
+    draw();
+  });
+
+  // Clear
+  document.getElementById('modelClear').addEventListener('click', () => {
+    points = [];
+    draw();
+  });
+
+  STEPS[0] = {
+    enter() { points = defaultPoints.map(p => [...p]); resize(); },
+    leave() {},
+    resize
+  };
+})();
+
+// ============================================================
+// STEP 2: TOKENS & TEXT
+// ============================================================
+(function() {
+  const input = document.getElementById('tokenInput');
+  const display = document.getElementById('tokenDisplay');
+  const countEl = document.getElementById('tokenCount');
+
+  const TOKEN_COLORS = [
+    '#3a6a8e', '#5a3a7e', '#3a7e5a', '#7e6a3a', '#7e3a4a',
+    '#3a5a7e', '#6a3a7e', '#3a7e7a', '#7e5a3a', '#5a7e3a',
+    '#7e3a6a', '#3a7e3a'
+  ];
+
+  // Simplified tokenizer: splits on common patterns
+  function tokenize(text) {
+    if (!text) return [];
+    const tokens = [];
+    // Split into rough word-level chunks first
+    const chunks = text.match(/\S+|\s+/g) || [];
+    for (const chunk of chunks) {
+      if (/^\s+$/.test(chunk)) {
+        tokens.push(chunk);
+        continue;
+      }
+      // Split punctuation
+      const parts = chunk.match(/[a-zA-Z]+|[0-9]+|[^\sa-zA-Z0-9]/g) || [chunk];
+      for (const part of parts) {
+        if (/^[a-zA-Z]+$/.test(part)) {
+          // Try subword splitting
+          const subwords = splitSubword(part);
+          tokens.push(...subwords);
+        } else {
+          tokens.push(part);
+        }
+      }
+    }
+    return tokens;
+  }
+
+  const PREFIXES = ['un', 're', 'pre', 'dis', 'mis', 'over', 'under', 'out', 'anti', 'non'];
+  const SUFFIXES = ['tion', 'sion', 'ment', 'ness', 'able', 'ible', 'ful', 'less', 'ous', 'ive', 'ing', 'ated', 'ize', 'ise', 'ity', 'ally', 'ling', 'ism', 'ist', 'ary', 'ery', 'ory'];
+  const COMMON = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
+    'might', 'shall', 'can', 'not', 'and', 'but', 'or', 'if', 'then', 'else', 'when',
+    'at', 'by', 'for', 'with', 'about', 'from', 'to', 'in', 'on', 'of', 'that', 'this',
+    'it', 'its', 'my', 'your', 'his', 'her', 'our', 'their', 'what', 'which', 'who',
+    'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
+    'no', 'nor', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just',
+    'because', 'as', 'until', 'while', 'of', 'up', 'out', 'on', 'off',
+    'over', 'under', 'again', 'further', 'once', 'here', 'there', 'where',
+    'why', 'all', 'am', 'I', 'me', 'we', 'you', 'he', 'she', 'they',
+    'them', 'him', 'us', 'get', 'got', 'go', 'went', 'say', 'said',
+    'know', 'think', 'see', 'come', 'make', 'like', 'time', 'look',
+    'way', 'day', 'man', 'new', 'now', 'old', 'use', 'def', 'return',
+    'class', 'function', 'var', 'let', 'const', 'import', 'from',
+    'print', 'hello', 'world', 'cat', 'sat', 'mat', 'dog', 'fox',
+    'brown', 'quick', 'lazy', 'jumps', 'natural', 'language', 'processing',
+    'transformer', 'architecture', 'attention', 'model', 'token', 'data',
+    'long', 'word', 'simple']);
+
+  function splitSubword(word) {
+    const lower = word.toLowerCase();
+    if (COMMON.has(lower) || word.length <= 3) return [word];
+
+    const parts = [];
+    let remaining = word;
+    let remainLower = lower;
+
+    // Check prefix
+    for (const pre of PREFIXES) {
+      if (remainLower.startsWith(pre) && remainLower.length > pre.length + 2) {
+        parts.push(remaining.slice(0, pre.length));
+        remaining = remaining.slice(pre.length);
+        remainLower = remainLower.slice(pre.length);
+        break;
+      }
+    }
+
+    // Check suffix
+    let suffix = '';
+    for (const suf of SUFFIXES) {
+      if (remainLower.endsWith(suf) && remainLower.length > suf.length + 1) {
+        suffix = remaining.slice(remaining.length - suf.length);
+        remaining = remaining.slice(0, remaining.length - suf.length);
+        remainLower = remainLower.slice(0, remainLower.length - suf.length);
+        break;
+      }
+    }
+
+    // Split remaining long chunks
+    if (remaining.length > 6) {
+      const mid = Math.ceil(remaining.length / 2);
+      parts.push(remaining.slice(0, mid));
+      parts.push(remaining.slice(mid));
+    } else if (remaining.length > 0) {
+      parts.push(remaining);
+    }
+    if (suffix) parts.push(suffix);
+
+    return parts.length > 0 ? parts : [word];
+  }
+
+  function render() {
+    const tokens = tokenize(input.value);
+    display.innerHTML = '';
+    let colorIdx = 0;
+    for (const tok of tokens) {
+      if (/^\s+$/.test(tok)) {
+        const sp = document.createElement('span');
+        sp.style.width = '8px'; sp.style.display = 'inline-block';
+        display.appendChild(sp);
+      } else {
+        const chip = document.createElement('span');
+        chip.className = 'token-chip';
+        chip.textContent = tok;
+        const color = TOKEN_COLORS[colorIdx % TOKEN_COLORS.length];
+        chip.style.background = color + '40';
+        chip.style.border = `1px solid ${color}`;
+        chip.style.color = '#e0e8f0';
+        display.appendChild(chip);
+        colorIdx++;
+      }
+    }
+    const tokenCount = tokens.filter(t => !/^\s+$/.test(t)).length;
+    countEl.textContent = `${tokenCount} token${tokenCount !== 1 ? 's' : ''}`;
+  }
+
+  input.addEventListener('input', render);
+
+  // Example buttons
+  document.querySelectorAll('[data-example]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.dataset.example;
+      render();
+    });
+  });
+
+  STEPS[1] = {
+    enter() { render(); },
+    leave() {},
+    resize() {}
+  };
+})();
+
+// ============================================================
+// STEP 3: NEXT-TOKEN PREDICTION
+// ============================================================
+(function() {
+  const canvas = document.getElementById('predCanvas');
+  const ctx = canvas.getContext('2d');
+  const sentenceEl = document.getElementById('sentenceDisplay');
+  let W, H;
+
+  // Pre-computed probability tables (5 steps each for longer generation)
+  const PROMPTS = [
+    { // "The cat sat on"
+      start: ['The', 'cat', 'sat', 'on'],
+      steps: [
+        [['the', 0.42], ['a', 0.18], ['its', 0.10], ['my', 0.07], ['her', 0.06], ['his', 0.05], ['their', 0.04], ['your', 0.03], ['our', 0.02], ['that', 0.01]],
+        [['mat', 0.35], ['couch', 0.15], ['bed', 0.12], ['floor', 0.10], ['chair', 0.08], ['table', 0.06], ['roof', 0.05], ['rug', 0.04], ['grass', 0.03], ['porch', 0.02]],
+        [['and', 0.25], [',', 0.20], ['.', 0.18], ['while', 0.10], ['until', 0.08], ['because', 0.06], ['in', 0.05], ['waiting', 0.04], ['watching', 0.02], ['purring', 0.02]],
+        [['purred', 0.22], ['looked', 0.18], ['stared', 0.14], ['fell', 0.12], ['stretched', 0.10], ['slept', 0.08], ['dreamed', 0.06], ['waited', 0.04], ['yawned', 0.04], ['watched', 0.02]],
+        [['softly', 0.28], ['quietly', 0.20], ['contentedly', 0.15], ['.', 0.12], ['in', 0.08], ['at', 0.06], ['with', 0.04], ['and', 0.03], ['while', 0.02], ['before', 0.02]],
+      ]
+    },
+    { // "Once upon a"
+      start: ['Once', 'upon', 'a'],
+      steps: [
+        [['time', 0.75], ['midnight', 0.06], ['hill', 0.04], ['day', 0.03], ['summer', 0.03], ['winter', 0.02], ['dream', 0.02], ['star', 0.02], ['wish', 0.015], ['cloud', 0.005]],
+        [[',', 0.55], ['there', 0.20], ['in', 0.10], ['long', 0.05], ['—', 0.03], ['dreary', 0.02], ['not', 0.02], ['when', 0.015], ['far', 0.01], ['ago', 0.005]],
+        [['there', 0.40], ['in', 0.20], ['a', 0.12], ['the', 0.08], ['long', 0.06], ['lived', 0.05], ['far', 0.04], ['when', 0.03], ['not', 0.01], ['was', 0.01]],
+        [['lived', 0.35], ['was', 0.25], ['existed', 0.10], ['dwelt', 0.08], ['stood', 0.06], ['sat', 0.05], ['lay', 0.04], ['ruled', 0.03], ['worked', 0.02], ['slept', 0.02]],
+        [['a', 0.40], ['an', 0.20], ['the', 0.12], ['in', 0.08], ['young', 0.06], ['old', 0.04], ['wise', 0.04], ['lonely', 0.03], ['brave', 0.02], ['humble', 0.01]],
+      ]
+    },
+    { // "The capital of"
+      start: ['The', 'capital', 'of'],
+      steps: [
+        [['France', 0.22], ['the', 0.18], ['Japan', 0.10], ['Italy', 0.09], ['Germany', 0.08], ['China', 0.07], ['India', 0.06], ['Spain', 0.05], ['Brazil', 0.04], ['Canada', 0.03]],
+        [['is', 0.80], [',', 0.10], ['was', 0.04], ['—', 0.02], ['has', 0.01], ['lies', 0.01], ['sits', 0.005], ['remains', 0.005], ['being', 0.003], ['stands', 0.002]],
+        [['Paris', 0.65], ['a', 0.08], ['known', 0.06], ['located', 0.05], ['one', 0.04], ['the', 0.03], ['famous', 0.03], ['home', 0.02], ['called', 0.02], ['considered', 0.02]],
+        [[',', 0.40], ['.', 0.30], ['—', 0.08], ['which', 0.06], ['and', 0.05], ['located', 0.04], ['with', 0.03], ['known', 0.02], ['situated', 0.01], ['home', 0.01]],
+        [['a', 0.25], ['known', 0.18], ['the', 0.15], ['one', 0.10], ['home', 0.08], ['famous', 0.07], ['also', 0.06], ['often', 0.05], ['sometimes', 0.03], ['widely', 0.03]],
+      ]
+    }
+  ];
+
+  let activePrompt = 0;
+  let tokens = [];
+  let stepIdx = 0;
+  let autoInterval = null;
+  let hoveredBar = -1;
+  let lastChosenProb = -1;
+
+  function reset() {
+    if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+    const p = PROMPTS[activePrompt];
+    tokens = [...p.start];
+    stepIdx = 0;
+    lastChosenProb = -1;
+    hoveredBar = -1;
+    renderSentence();
+    resize();
+  }
+
+  function renderSentence() {
+    sentenceEl.innerHTML = '';
+    tokens.forEach((tok, i) => {
+      const span = document.createElement('span');
+      span.className = 'sentence-token';
+      if (i >= PROMPTS[activePrompt].start.length) span.classList.add('new');
+      span.textContent = tok + ' ';
+      sentenceEl.appendChild(span);
+    });
+    // Add blinking cursor
+    const cursor = document.createElement('span');
+    cursor.style.cssText = 'display:inline-block;width:2px;height:1.1em;background:#7ec8f0;vertical-align:text-bottom;animation:blink 1s step-end infinite;';
+    sentenceEl.appendChild(cursor);
+  }
+
+  function getCurrentProbs() {
+    const p = PROMPTS[activePrompt];
+    if (stepIdx >= p.steps.length) return null;
+    return p.steps[stepIdx];
+  }
+
+  function entropy(probs) {
+    let h = 0;
+    for (const [, p] of probs) {
+      if (p > 0) h -= p * Math.log2(p);
+    }
+    return h;
+  }
+
+  function chooseToken(token) {
+    const probs = getCurrentProbs();
+    if (probs) {
+      const match = probs.find(p => p[0] === token);
+      lastChosenProb = match ? match[1] : 0;
+    }
+    tokens.push(token);
+    stepIdx++;
+    hoveredBar = -1;
+    renderSentence();
+    draw();
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function getBarLayout() {
+    const probs = getCurrentProbs();
+    if (!probs) return null;
+    const barH = Math.min(26, (H - 50) / probs.length - 4);
+    const labelW = 80;
+    const startY = 10;
+    return { barH, labelW, startY, probs };
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const probs = getCurrentProbs();
+    if (!probs) {
+      ctx.fillStyle = '#4a6a8a'; ctx.font = '14px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sequence complete! Click Reset to try again.', W / 2, H / 2 - 10);
+      ctx.fillStyle = '#5a9cc0'; ctx.font = '12px Segoe UI, system-ui, sans-serif';
+      ctx.fillText(`Generated ${tokens.length - PROMPTS[activePrompt].start.length} tokens`, W / 2, H / 2 + 14);
+      return;
+    }
+
+    const barH = Math.min(26, (H - 50) / probs.length - 4);
+    const labelW = 80;
+    const probW = 50;
+    const barMaxW = W - labelW - probW - 30;
+    const startY = 10;
+
+    // Step indicator
+    ctx.fillStyle = '#5a9cc0'; ctx.font = '10px Courier New, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`step ${stepIdx + 1}/${PROMPTS[activePrompt].steps.length}`, W - 8, startY + 2);
+
+    for (let i = 0; i < probs.length; i++) {
+      const [token, prob] = probs[i];
+      const y = startY + 8 + i * (barH + 4);
+      const isHovered = i === hoveredBar;
+
+      // Hover background
+      if (isHovered) {
+        ctx.fillStyle = 'rgba(74, 158, 206, 0.08)';
+        ctx.fillRect(0, y - 1, W, barH + 2);
+      }
+
+      // Label
+      ctx.fillStyle = isHovered ? '#e0f0ff' : '#c0d8e8';
+      ctx.font = `${isHovered ? 'bold ' : ''}${Math.min(14, barH * 0.65)}px Courier New, monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillText(token, labelW - 6, y + barH * 0.72);
+
+      // Bar
+      const bw = prob * barMaxW;
+      const alpha = isHovered ? 0.5 + prob * 0.5 : 0.3 + prob * 0.7;
+      ctx.fillStyle = isHovered ? `rgba(126, 200, 240, ${alpha})` : `rgba(74, 158, 206, ${alpha})`;
+      ctx.beginPath();
+      ctx.roundRect(labelW, y, Math.max(3, bw), barH, 3);
+      ctx.fill();
+
+      // Hover outline
+      if (isHovered) {
+        ctx.strokeStyle = '#7ec8f0'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.roundRect(labelW, y, Math.max(3, bw), barH, 3); ctx.stroke();
+      }
+
+      // Probability
+      ctx.fillStyle = isHovered ? '#e0f0ff' : '#7ec8f0'; ctx.textAlign = 'left';
+      ctx.font = `${Math.min(12, barH * 0.52)}px Courier New, monospace`;
+      ctx.fillText(`${(prob * 100).toFixed(1)}%`, labelW + bw + 6, y + barH * 0.72);
+    }
+
+    // Entropy and surprise metrics at bottom
+    const metricY = H - 12;
+    const ent = entropy(probs);
+    ctx.fillStyle = '#6a8da8'; ctx.font = '10px Courier New, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`entropy: ${ent.toFixed(2)} bits`, 8, metricY);
+
+    if (lastChosenProb >= 0) {
+      const surprise = -Math.log2(Math.max(lastChosenProb, 0.001));
+      const color = surprise > 3 ? '#f0a050' : surprise > 1.5 ? '#d0c060' : '#60d080';
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      const label = surprise > 3 ? 'surprising!' : surprise > 1.5 ? 'somewhat expected' : 'very expected';
+      ctx.fillText(`last pick: ${(lastChosenProb * 100).toFixed(1)}% (${label})`, W / 2, metricY);
+    }
+
+    ctx.fillStyle = '#4a6a8a'; ctx.textAlign = 'right';
+    ctx.fillText('click a bar to choose', W - 8, metricY);
+  }
+
+  // Hover tracking
+  canvas.addEventListener('mousemove', (e) => {
+    const layout = getBarLayout();
+    if (!layout) { hoveredBar = -1; draw(); return; }
+    const rect = canvas.getBoundingClientRect();
+    const cy = e.clientY - rect.top;
+    let found = -1;
+    for (let i = 0; i < layout.probs.length; i++) {
+      const y = layout.startY + 8 + i * (layout.barH + 4);
+      if (cy >= y && cy <= y + layout.barH) { found = i; break; }
+    }
+    if (found !== hoveredBar) { hoveredBar = found; canvas.style.cursor = found >= 0 ? 'pointer' : 'crosshair'; draw(); }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    if (hoveredBar !== -1) { hoveredBar = -1; draw(); }
+  });
+
+  // Click on bars to choose token
+  canvas.addEventListener('click', (e) => {
+    const layout = getBarLayout();
+    if (!layout) return;
+    const rect = canvas.getBoundingClientRect();
+    const cy = e.clientY - rect.top;
+    for (let i = 0; i < layout.probs.length; i++) {
+      const y = layout.startY + 8 + i * (layout.barH + 4);
+      if (cy >= y && cy <= y + layout.barH) {
+        chooseToken(layout.probs[i][0]);
+        return;
+      }
+    }
+  });
+
+  // Auto-complete
+  document.getElementById('autoComplete').addEventListener('click', () => {
+    if (autoInterval) { clearInterval(autoInterval); autoInterval = null; return; }
+    autoInterval = setInterval(() => {
+      const probs = getCurrentProbs();
+      if (!probs) { clearInterval(autoInterval); autoInterval = null; return; }
+      chooseToken(probs[0][0]);
+    }, 600);
+  });
+
+  // Reset
+  document.getElementById('predReset').addEventListener('click', reset);
+
+  // Prompt buttons
+  document.querySelectorAll('[data-prompt]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-prompt]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activePrompt = parseInt(btn.dataset.prompt);
+      reset();
+    });
+  });
+
+  STEPS[2] = {
+    enter() { reset(); },
+    leave() { if (autoInterval) { clearInterval(autoInterval); autoInterval = null; } },
+    resize
+  };
+})();
+
+// ============================================================
+// STEP 4: TEMPERATURE & SAMPLING
+// ============================================================
+(function() {
+  const canvas = document.getElementById('tempCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  const DISTRIBUTIONS = {
+    confident: {
+      label: 'Confident: "The capital of France is ___"',
+      tokens: ['Paris', 'the', 'a', 'known', 'located', 'one', 'called', 'famous', 'situated', 'considered'],
+      logits: [4.2, 1.5, 0.8, 0.3, 0.1, -0.2, -0.5, -0.8, -1.2, -1.8]
+    },
+    ambiguous: {
+      label: 'Ambiguous: "I went to the ___"',
+      tokens: ['store', 'park', 'doctor', 'bank', 'beach', 'gym', 'office', 'movies', 'library', 'school'],
+      logits: [1.8, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
+    }
+  };
+
+  let activeDist = 'confident';
+  let temperature = 1.0;
+  let histogram = {};
+
+  function softmax(logits, T) {
+    const t = Math.max(T, 0.01);
+    const scaled = logits.map(l => l / t);
+    const maxS = Math.max(...scaled);
+    const exps = scaled.map(s => Math.exp(s - maxS));
+    const sum = exps.reduce((a, b) => a + b, 0);
+    return exps.map(e => e / sum);
+  }
+
+  function sampleFrom(probs) {
+    let r = Math.random();
+    for (let i = 0; i < probs.length; i++) {
+      r -= probs[i];
+      if (r <= 0) return i;
+    }
+    return probs.length - 1;
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const dist = DISTRIBUTIONS[activeDist];
+    const probs = softmax(dist.logits, temperature);
+
+    const halfH = H * 0.55;
+    const barH = Math.min(24, (halfH - 30) / dist.tokens.length - 3);
+    const labelW = 90;
+    const probW = 50;
+    const barMaxW = W - labelW - probW - 30;
+
+    // Title
+    ctx.fillStyle = '#6a8da8'; ctx.font = '11px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(dist.label, 10, 14);
+
+    // Probability bars
+    const startY = 26;
+    for (let i = 0; i < dist.tokens.length; i++) {
+      const y = startY + i * (barH + 3);
+      ctx.fillStyle = '#c0d8e8';
+      ctx.font = `${Math.min(13, barH * 0.6)}px Courier New, monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillText(dist.tokens[i], labelW - 6, y + barH * 0.72);
+
+      const bw = probs[i] * barMaxW;
+      const alpha = 0.3 + probs[i] * 0.7;
+      ctx.fillStyle = `rgba(74, 158, 206, ${alpha})`;
+      ctx.beginPath(); ctx.roundRect(labelW, y, Math.max(2, bw), barH, 3); ctx.fill();
+
+      ctx.fillStyle = '#7ec8f0'; ctx.textAlign = 'left';
+      ctx.font = `${Math.min(11, barH * 0.5)}px Courier New, monospace`;
+      ctx.fillText(`${(probs[i] * 100).toFixed(1)}%`, labelW + bw + 6, y + barH * 0.72);
+    }
+
+    // Histogram section
+    const histY = halfH + 10;
+    ctx.fillStyle = '#5a9cc0'; ctx.font = '11px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('SAMPLE HISTOGRAM', 10, histY);
+
+    const totalSamples = Object.values(histogram).reduce((a, b) => a + b, 0);
+    if (totalSamples > 0) {
+      const maxCount = Math.max(...Object.values(histogram));
+      const hBarH = Math.min(18, (H - histY - 20) / dist.tokens.length - 2);
+      const hStartY = histY + 10;
+      const hBarMaxW = W - labelW - 60;
+
+      for (let i = 0; i < dist.tokens.length; i++) {
+        const count = histogram[dist.tokens[i]] || 0;
+        const y = hStartY + i * (hBarH + 2);
+        ctx.fillStyle = '#8ab4d0';
+        ctx.font = `${Math.min(11, hBarH * 0.65)}px Courier New, monospace`;
+        ctx.textAlign = 'right';
+        ctx.fillText(dist.tokens[i], labelW - 6, y + hBarH * 0.72);
+
+        const bw = (count / maxCount) * hBarMaxW;
+        ctx.fillStyle = `rgba(96, 208, 128, ${0.3 + (count / maxCount) * 0.5})`;
+        ctx.beginPath(); ctx.roundRect(labelW, y, Math.max(1, bw), hBarH, 2); ctx.fill();
+
+        ctx.fillStyle = '#60d080'; ctx.textAlign = 'left';
+        ctx.font = `${Math.min(10, hBarH * 0.55)}px Courier New, monospace`;
+        ctx.fillText(`${count}`, labelW + bw + 4, y + hBarH * 0.72);
+      }
+
+      ctx.fillStyle = '#6a8da8'; ctx.textAlign = 'right';
+      ctx.font = '10px Courier New, monospace';
+      ctx.fillText(`total: ${totalSamples}`, W - 10, histY);
+    } else {
+      ctx.fillStyle = '#3a5a7a'; ctx.font = '12px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click "Sample 1" or "Sample 100" to see results', W / 2, histY + 40);
+    }
+  }
+
+  function doSample(count) {
+    const dist = DISTRIBUTIONS[activeDist];
+    const probs = softmax(dist.logits, temperature);
+    for (let i = 0; i < count; i++) {
+      const idx = sampleFrom(probs);
+      const tok = dist.tokens[idx];
+      histogram[tok] = (histogram[tok] || 0) + 1;
+    }
+    draw();
+  }
+
+  // Temperature slider
+  const tempSlider = document.getElementById('tempSlider');
+  const tempVal = document.getElementById('tempVal');
+  tempSlider.addEventListener('input', () => {
+    temperature = parseFloat(tempSlider.value);
+    tempVal.textContent = temperature.toFixed(2);
+    draw();
+  });
+
+  // Sample buttons
+  document.getElementById('sample1').addEventListener('click', () => doSample(1));
+  document.getElementById('sample100').addEventListener('click', () => doSample(100));
+  document.getElementById('sampleReset').addEventListener('click', () => {
+    histogram = {};
+    draw();
+  });
+
+  // Distribution toggle
+  document.querySelectorAll('[data-dist]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-dist]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeDist = btn.dataset.dist;
+      histogram = {};
+      draw();
+    });
+  });
+
+  STEPS[3] = {
+    enter() { histogram = {}; temperature = 1.0; tempSlider.value = '1.0'; tempVal.textContent = '1.00'; resize(); },
+    leave() {},
+    resize
+  };
+})();
+
+// ============================================================
+// STEP 5: ATTENTION
+// ============================================================
+(function() {
+  const canvas = document.getElementById('attCanvas');
+  const ctx = canvas.getContext('2d');
+  const sentenceEl = document.getElementById('attSentence');
+  let W, H;
+  let selectedToken = -1;
+
+  const SENTENCES = [
+    {
+      tokens: ['The', 'cat', 'sat', 'on', 'the', 'mat', 'because', 'it', 'was', 'tired'],
+      label: 'Pronoun resolution',
+      // Attention from each token (simplified: key connections)
+      attention: {
+        7: [[1, 0.6], [5, 0.15], [8, 0.12], [6, 0.08]], // "it" -> "cat" (strong), "mat" (weak)
+        8: [[7, 0.35], [1, 0.25], [9, 0.2], [2, 0.1]],   // "was" -> "it", "cat"
+        9: [[7, 0.3], [1, 0.3], [8, 0.2], [2, 0.1]],     // "tired" -> "it", "cat", "was"
+        6: [[2, 0.3], [1, 0.2], [5, 0.2], [0, 0.15]],    // "because" -> "sat", "cat", "mat"
+        2: [[1, 0.5], [3, 0.2], [0, 0.15]],               // "sat" -> "cat"
+        5: [[4, 0.35], [3, 0.25], [2, 0.15], [1, 0.1]],  // "mat" -> "the", "on"
+      }
+    },
+    {
+      tokens: ['Paris', 'is', 'the', 'capital', 'of', 'France'],
+      label: 'Factual association',
+      attention: {
+        0: [[3, 0.3], [5, 0.35], [1, 0.15]],            // "Paris" -> "capital", "France"
+        3: [[0, 0.4], [5, 0.3], [2, 0.15]],             // "capital" -> "Paris", "France"
+        5: [[0, 0.35], [3, 0.3], [4, 0.2]],             // "France" -> "Paris", "capital"
+        1: [[0, 0.5], [3, 0.2], [2, 0.1]],              // "is" -> "Paris"
+      }
+    },
+    {
+      tokens: ['The', 'bank', 'approved', 'the', 'loan', 'application'],
+      label: 'Semantic context',
+      attention: {
+        1: [[2, 0.3], [4, 0.35], [5, 0.2]],             // "bank" -> "approved", "loan" (financial sense)
+        2: [[1, 0.3], [4, 0.25], [5, 0.2], [0, 0.1]],  // "approved" -> "bank", "loan"
+        4: [[1, 0.35], [2, 0.25], [5, 0.2], [3, 0.1]], // "loan" -> "bank", "approved"
+        5: [[4, 0.4], [2, 0.2], [1, 0.2]],              // "application" -> "loan", "approved"
+      }
+    }
+  ];
+
+  let activeSentence = 0;
+
+  function renderTokens() {
+    sentenceEl.innerHTML = '';
+    const s = SENTENCES[activeSentence];
+    s.tokens.forEach((tok, i) => {
+      const el = document.createElement('span');
+      el.className = 'att-token';
+      el.textContent = tok;
+      el.dataset.idx = i;
+      if (i === selectedToken) el.classList.add('selected');
+
+      // Highlight targets
+      if (selectedToken >= 0 && s.attention[selectedToken]) {
+        const att = s.attention[selectedToken];
+        const match = att.find(a => a[0] === i);
+        if (match) {
+          const weight = match[1];
+          el.classList.add('highlighted');
+          el.style.background = `rgba(74, 158, 206, ${weight * 0.6})`;
+          el.style.borderColor = `rgba(126, 200, 240, ${0.4 + weight * 0.6})`;
+        }
+      }
+
+      el.addEventListener('click', () => {
+        selectedToken = selectedToken === i ? -1 : i;
+        renderTokens();
+        drawArcs();
+      });
+      sentenceEl.appendChild(el);
+    });
+  }
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawArcs();
+  }
+
+  function drawArcs() {
+    ctx.clearRect(0, 0, W, H);
+    if (selectedToken < 0) {
+      ctx.fillStyle = '#4a6a8a'; ctx.font = '13px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click a token above to see its attention pattern', W / 2, H / 2);
+      return;
+    }
+
+    const s = SENTENCES[activeSentence];
+    const att = s.attention[selectedToken];
+    if (!att) {
+      ctx.fillStyle = '#4a6a8a'; ctx.font = '13px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No strong attention patterns for this token', W / 2, H / 2);
+      return;
+    }
+
+    // Get token element positions relative to canvas
+    const tokenEls = sentenceEl.querySelectorAll('.att-token');
+    const canvasRect = canvas.getBoundingClientRect();
+    const sentenceRect = sentenceEl.getBoundingClientRect();
+
+    const getPos = (idx) => {
+      const el = tokenEls[idx];
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2 - canvasRect.left,
+        y: 10
+      };
+    };
+
+    const srcPos = getPos(selectedToken);
+
+    // Draw arcs
+    for (const [targetIdx, weight] of att) {
+      const tgtPos = getPos(targetIdx);
+      const midX = (srcPos.x + tgtPos.x) / 2;
+      const dist = Math.abs(srcPos.x - tgtPos.x);
+      const arcH = Math.min(H - 30, 30 + dist * 0.4);
+
+      ctx.strokeStyle = `rgba(74, 158, 206, ${0.2 + weight * 0.8})`;
+      ctx.lineWidth = 1 + weight * 5;
+      ctx.beginPath();
+      ctx.moveTo(srcPos.x, srcPos.y);
+      ctx.quadraticCurveTo(midX, srcPos.y + arcH, tgtPos.x, tgtPos.y);
+      ctx.stroke();
+
+      // Arrow at target
+      ctx.fillStyle = `rgba(74, 158, 206, ${0.3 + weight * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(tgtPos.x, tgtPos.y, 3 + weight * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Weight label
+      ctx.fillStyle = `rgba(126, 200, 240, ${0.4 + weight * 0.6})`;
+      ctx.font = '10px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${(weight * 100).toFixed(0)}%`, midX, srcPos.y + arcH * 0.6);
+    }
+  }
+
+  // Sentence buttons
+  document.querySelectorAll('[data-att]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-att]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeSentence = parseInt(btn.dataset.att);
+      selectedToken = -1;
+      renderTokens();
+      resize();
+    });
+  });
+
+  STEPS[4] = {
+    enter() { selectedToken = -1; renderTokens(); resize(); },
+    leave() {},
+    resize
+  };
+})();
+
+// ============================================================
+// STEP 6: FROM CHAT TO AGENTS
+// ============================================================
+(function() {
+  const canvas = document.getElementById('loopCanvas');
+  const ctx = canvas.getContext('2d');
+  const transcriptEl = document.getElementById('agentTranscript');
+  let W, H;
+
+  const SCENARIOS = [
+    {
+      label: 'Travel Planning',
+      steps: [
+        { phase: 'observe', text: 'User asks:', detail: '"Book me a flight to NYC next Friday"' },
+        { phase: 'think', text: 'Planning:', detail: 'I need to: 1) Check calendar for conflicts, 2) Search flights, 3) Book the best option' },
+        { phase: 'act', text: 'Calling tool:', detail: 'check_calendar(date="next Friday") → "Friday is free, no conflicts"' },
+        { phase: 'observe', text: 'Result received:', detail: 'Calendar confirms Friday is available' },
+        { phase: 'think', text: 'Reasoning:', detail: 'Good, no conflicts. Now I should search for flights to NYC on Friday.' },
+        { phase: 'act', text: 'Calling tool:', detail: 'search_flights(to="NYC", date="Friday") → 3 options: $180, $245, $310' },
+        { phase: 'observe', text: 'Result received:', detail: 'Found 3 flights: Delta $180 (6am), United $245 (10am), JetBlue $310 (2pm)' },
+        { phase: 'think', text: 'Reasoning:', detail: 'The Delta flight is cheapest but very early. United at 10am is a good balance of price and convenience.' },
+        { phase: 'act', text: 'Response:', detail: '"I found flights to NYC on Friday. I recommend United at 10am for $245 — good balance of price and timing. Want me to book it?"' },
+      ]
+    },
+    {
+      label: 'Research',
+      steps: [
+        { phase: 'observe', text: 'User asks:', detail: '"What\'s the latest research on room-temperature superconductors?"' },
+        { phase: 'think', text: 'Planning:', detail: 'This requires current information. I should search for recent papers and news.' },
+        { phase: 'act', text: 'Calling tool:', detail: 'web_search("room temperature superconductor 2025 research") → 5 results' },
+        { phase: 'observe', text: 'Result received:', detail: 'Found articles about LK-99 follow-ups, new hydride compounds, and a Nature paper on copper-substituted lead apatite' },
+        { phase: 'think', text: 'Reasoning:', detail: 'The results mention several developments. I should get more detail on the most significant one.' },
+        { phase: 'act', text: 'Calling tool:', detail: 'read_article(url="nature.com/...") → Full text of recent paper' },
+        { phase: 'observe', text: 'Result received:', detail: 'Paper describes a new hydride material showing superconductivity at 15°C under 10 GPa pressure' },
+        { phase: 'think', text: 'Reasoning:', detail: 'This is significant but still requires high pressure. I can now give a comprehensive summary of the field.' },
+        { phase: 'act', text: 'Response:', detail: '"Here\'s what\'s happening: The LK-99 claims from 2023 weren\'t replicated, but new hydride compounds show promise..."' },
+      ]
+    }
+  ];
+
+  let activeScenario = 0;
+  let stepIdx = -1;
+  let autoInterval = null;
+  let loopAngle = -Math.PI / 2; // Start at top
+
+  const PHASE_ANGLES = { observe: -Math.PI / 2, think: Math.PI / 6 * 2 + Math.PI / 6, act: Math.PI + Math.PI / 6 };
+  const PHASE_COLORS = { observe: '#4a9ece', think: '#d0b040', act: '#60d080' };
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawLoop();
+  }
+
+  function drawLoop() {
+    ctx.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2;
+    const r = Math.min(W, H) * 0.33;
+
+    // Draw circle track
+    ctx.strokeStyle = '#1e3450'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+
+    // Draw three segments
+    const phases = ['observe', 'think', 'act'];
+    const labels = ['OBSERVE', 'THINK', 'ACT'];
+    const icons = ['👁', '🧠', '⚡'];
+
+    for (let i = 0; i < 3; i++) {
+      const startA = -Math.PI / 2 + (i * Math.PI * 2 / 3);
+      const endA = startA + Math.PI * 2 / 3;
+
+      // Segment arc
+      const isActive = stepIdx >= 0 && SCENARIOS[activeScenario].steps[stepIdx] &&
+                       SCENARIOS[activeScenario].steps[stepIdx].phase === phases[i];
+      ctx.strokeStyle = isActive ? PHASE_COLORS[phases[i]] : '#2a4a6a';
+      ctx.lineWidth = isActive ? 10 : 6;
+      ctx.beginPath(); ctx.arc(cx, cy, r, startA, endA); ctx.stroke();
+
+      // Label
+      const labelA = startA + Math.PI / 3;
+      const lx = cx + Math.cos(labelA) * (r + 28);
+      const ly = cy + Math.sin(labelA) * (r + 28);
+      ctx.fillStyle = isActive ? PHASE_COLORS[phases[i]] : '#6a8da8';
+      ctx.font = `${isActive ? 'bold ' : ''}11px Segoe UI, system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(labels[i], lx, ly);
+
+      // Icon inside circle
+      const ix = cx + Math.cos(labelA) * (r - 28);
+      const iy = cy + Math.sin(labelA) * (r - 28);
+      ctx.font = '18px serif';
+      ctx.fillText(icons[i], ix, iy);
+    }
+
+    // Marble
+    if (stepIdx >= 0) {
+      const phase = SCENARIOS[activeScenario].steps[stepIdx]?.phase || 'observe';
+      const phaseIdx = phases.indexOf(phase);
+      const marbleA = -Math.PI / 2 + (phaseIdx * Math.PI * 2 / 3) + Math.PI / 3;
+      const mx = cx + Math.cos(marbleA) * r;
+      const my = cy + Math.sin(marbleA) * r;
+
+      ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2);
+      ctx.fillStyle = PHASE_COLORS[phase]; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // Center text
+    ctx.fillStyle = '#4a6a8a'; ctx.font = '12px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (stepIdx < 0) {
+      ctx.fillText('Click Step to begin', cx, cy);
+    } else {
+      const phase = SCENARIOS[activeScenario].steps[stepIdx]?.phase || '';
+      ctx.fillStyle = PHASE_COLORS[phase] || '#6a8da8';
+      ctx.font = 'bold 14px Segoe UI, system-ui, sans-serif';
+      ctx.fillText(phase.toUpperCase(), cx, cy);
+    }
+  }
+
+  function addTranscriptEntry(step) {
+    const entry = document.createElement('div');
+    entry.className = `transcript-entry transcript-${step.phase}`;
+    const label = document.createElement('div');
+    label.className = 'phase-label';
+    label.style.color = PHASE_COLORS[step.phase];
+    label.textContent = step.text;
+    entry.appendChild(label);
+    const detail = document.createElement('div');
+    detail.style.color = '#c0d8e8';
+    detail.textContent = step.detail;
+    entry.appendChild(detail);
+    transcriptEl.appendChild(entry);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  function doStep() {
+    const scenario = SCENARIOS[activeScenario];
+    stepIdx++;
+    if (stepIdx >= scenario.steps.length) {
+      if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+      return;
+    }
+    addTranscriptEntry(scenario.steps[stepIdx]);
+    drawLoop();
+  }
+
+  function resetScenario() {
+    if (autoInterval) { clearInterval(autoInterval); autoInterval = null; }
+    stepIdx = -1;
+    transcriptEl.innerHTML = '';
+    drawLoop();
+  }
+
+  document.getElementById('agentStep').addEventListener('click', doStep);
+  document.getElementById('agentAuto').addEventListener('click', () => {
+    if (autoInterval) { clearInterval(autoInterval); autoInterval = null; return; }
+    autoInterval = setInterval(() => {
+      if (stepIdx >= SCENARIOS[activeScenario].steps.length - 1) {
+        clearInterval(autoInterval); autoInterval = null; return;
+      }
+      doStep();
+    }, 1200);
+  });
+  document.getElementById('agentReset').addEventListener('click', resetScenario);
+
+  document.querySelectorAll('[data-scenario]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-scenario]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeScenario = parseInt(btn.dataset.scenario);
+      resetScenario();
+    });
+  });
+
+  STEPS[5] = {
+    enter() { resetScenario(); resize(); },
+    leave() { if (autoInterval) { clearInterval(autoInterval); autoInterval = null; } },
+    resize
+  };
+})();
+
+// ============================================================
+// STEP 7: TOOL USE
+// ============================================================
+(function() {
+  const toolGrid = document.getElementById('toolGrid');
+  const resultEl = document.getElementById('toolResult');
+
+  const TASKS = [
+    {
+      query: 'What is 37 × 54 + 12?',
+      tool: 'calculator',
+      thinking: 'This is a math problem. I should use the Calculator to get an exact answer rather than risk a computation error.',
+      call: 'calculator.compute("37 * 54 + 12")',
+      result: '→ 2010',
+      response: 'The answer is 2,010. (37 × 54 = 1,998, then + 12 = 2,010)',
+    },
+    {
+      query: 'What is the current weather in Tokyo?',
+      tool: 'search',
+      thinking: 'I need real-time information that I don\'t have in my training data. I should search the web.',
+      call: 'web_search("current weather Tokyo")',
+      result: '→ "Tokyo: 18°C, partly cloudy, humidity 65%, wind 12 km/h NE"',
+      response: 'It\'s currently 18°C (64°F) in Tokyo with partly cloudy skies. Humidity is at 65% with a light northeast breeze.',
+    },
+    {
+      query: 'Write a function to check if a number is prime, then test it on 97.',
+      tool: 'code',
+      thinking: 'I need to write code AND execute it to test. I\'ll use the Code Runner to write the function and verify the output.',
+      call: 'run_code("def is_prime(n):\\n  if n < 2: return False\\n  for i in range(2, int(n**0.5)+1):\\n    if n % i == 0: return False\\n  return True\\nprint(is_prime(97))")',
+      result: '→ "True"',
+      response: 'I wrote an is_prime() function that checks divisibility up to √n. Testing on 97 returns True — it is indeed prime (not divisible by 2, 3, 5, or 7).',
+    },
+    {
+      query: 'Save a summary of today\'s meeting notes to a file.',
+      tool: 'file',
+      thinking: 'The user wants to persist information to a file. I\'ll use the File Writer tool.',
+      call: 'write_file("meeting-notes-2025.md", "# Meeting Notes\\n\\n## Attendees\\n- Team leads\\n\\n## Action Items\\n- Review Q1 targets\\n- Schedule follow-up...")',
+      result: '→ File saved: meeting-notes-2025.md (142 bytes)',
+      response: 'Done! I\'ve saved the meeting notes to meeting-notes-2025.md with the attendees and action items.',
+    }
+  ];
+
+  let taskIdx = -1;
+  let animStep = 0;
+  let animTimer = null;
+
+  function clearToolHighlight() {
+    toolGrid.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active-tool'));
+  }
+
+  function highlightTool(name) {
+    clearToolHighlight();
+    const card = toolGrid.querySelector(`[data-tool="${name}"]`);
+    if (card) card.classList.add('active-tool');
+  }
+
+  function animateTask() {
+    const task = TASKS[taskIdx];
+    const lines = [
+      { html: `<div style="color:#6a8da8;margin-bottom:8px;">TASK: "${task.query}"</div>`, delay: 0 },
+      { html: `<div style="color:#d0b040;margin-bottom:6px;">🧠 <strong>Thinking:</strong> ${task.thinking}</div>`, delay: 800 },
+      { html: `<div style="color:#60d080;margin-bottom:6px;">⚡ <strong>Tool call:</strong> <span style="font-family:Courier New,monospace">${task.call}</span></div>`, delay: 1600, tool: task.tool },
+      { html: `<div style="color:#4a9ece;margin-bottom:6px;">📥 <strong>Result:</strong> <span style="font-family:Courier New,monospace">${task.result}</span></div>`, delay: 2400 },
+      { html: `<div style="color:#c0d8e8;margin-top:8px;padding-top:8px;border-top:1px solid #1e3450;">💬 <strong>Response:</strong> ${task.response}</div>`, delay: 3200 },
+    ];
+
+    resultEl.innerHTML = '';
+    animStep = 0;
+
+    function showNext() {
+      if (animStep >= lines.length) return;
+      const line = lines[animStep];
+      if (line.tool) highlightTool(line.tool);
+      resultEl.innerHTML += line.html;
+      animStep++;
+      if (animStep < lines.length) {
+        animTimer = setTimeout(showNext, lines[animStep].delay - lines[animStep - 1].delay);
+      }
+    }
+    showNext();
+  }
+
+  document.getElementById('toolNext').addEventListener('click', () => {
+    if (animTimer) clearTimeout(animTimer);
+    clearToolHighlight();
+    taskIdx = (taskIdx + 1) % TASKS.length;
+    animateTask();
+  });
+
+  document.getElementById('toolReset').addEventListener('click', () => {
+    if (animTimer) clearTimeout(animTimer);
+    clearToolHighlight();
+    taskIdx = -1;
+    resultEl.innerHTML = '<span style="color:#6a8da8;">Click "Next Task" to begin...</span>';
+  });
+
+  STEPS[6] = {
+    enter() {
+      taskIdx = -1;
+      clearToolHighlight();
+      resultEl.innerHTML = '<span style="color:#6a8da8;">Click "Next Task" to begin...</span>';
+    },
+    leave() { if (animTimer) clearTimeout(animTimer); },
+    resize() {}
+  };
+})();
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('resize', () => {
+  if (STEPS[currentStep] && STEPS[currentStep].resize) STEPS[currentStep].resize();
+});
+
+// Initial step
+goToStep(0);
+</script>
+</body>
+</html>
