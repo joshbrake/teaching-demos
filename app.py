@@ -82,6 +82,12 @@ DEMOS = [
         "description": "Identify issues in scientific figures using the HMC E80 rubric. Click on problem areas, classify issues, then check your answers against the key.",
         "tags": ["Scientific Writing", "Figures", "Assessment"],
     },
+    {
+        "slug": "measurement-error",
+        "title": "Measurement Error: Instrument Loading",
+        "description": "Explore how voltmeters with finite impedance alter the circuits they measure. Compare instruments, toggle an op-amp buffer, and visualize error propagation. Based on HMC E80.",
+        "tags": ["Circuits", "Error Analysis", "Measurement"],
+    },
 ]
 
 

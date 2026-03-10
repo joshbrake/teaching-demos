@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E80 Measurement Error: Instrument Loading</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628;
+    color: #e0e8f0;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-align: center;
+    padding: 18px 0 4px;
+    font-size: 1.6rem;
+    color: #7ec8f0;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6a8da8;
+    margin-bottom: 12px;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+  }
+
+  /* Panels */
+  .panel {
+    background: #111e30;
+    border: 1px solid #1e3450;
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #5a9cc0;
+    margin-bottom: 12px;
+  }
+
+  /* Controls */
+  .controls { grid-column: 1; grid-row: 1 / 3; }
+  .slider-group { margin-bottom: 16px; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: #8ab4d0;
+    margin-bottom: 6px;
+  }
+  .slider-group label span { color: #7ec8f0; font-weight: 600; font-family: 'Courier New', monospace; }
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e3450;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #4a9ece;
+    cursor: pointer;
+    border: 2px solid #7ec8f0;
+  }
+
+  /* Preset buttons */
+  .preset-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .preset-btn {
+    padding: 7px 4px;
+    border: 1px solid #2a4a6a;
+    border-radius: 6px;
+    background: #162840;
+    color: #7ec8f0;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Courier New', monospace;
+  }
+  .preset-btn:hover { background: #1e3a58; }
+  .preset-btn.active { background: #1a4028; border-color: #2a6a3a; color: #60d080; }
+
+  /* Frequency preset buttons */
+  .freq-preset-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .freq-preset-btn {
+    padding: 6px 4px;
+    border: 1px solid #2a4a6a;
+    border-radius: 6px;
+    background: #162840;
+    color: #7ec8f0;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: 'Courier New', monospace;
+  }
+  .freq-preset-btn:hover { background: #1e3a58; }
+  .freq-preset-btn.active { background: #1a3050; border-color: #4a8ab0; color: #b0e0ff; }
+
+  /* Instrument buttons */
+  .instrument-btns { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+  .inst-btn {
+    padding: 8px 10px;
+    border: 1px solid #2a4a6a;
+    border-radius: 6px;
+    background: #162840;
+    color: #8ab4d0;
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+  }
+  .inst-btn:hover { background: #1e3a58; }
+  .inst-btn.active { background: #1a3050; color: #e0e8f0; border-color: #4a8ab0; }
+
+  /* Toggle buttons */
+  .toggle-row {
+    display: flex;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .toggle-row button {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+    padding: 8px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #162840;
+    color: #6a8da8;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-row button.active { background: #2a5a80; color: #b0e0ff; }
+  .toggle-row button:hover:not(.active) { background: #1a3050; }
+
+  /* Buffer badge */
+  .buffer-badge {
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .buffer-badge.off { background: #1a1a2a; color: #6a6a8a; border: 1px solid #2a2a40; }
+  .buffer-badge.on { background: #1a3a20; color: #60d080; border: 1px solid #2a6a3a; }
+
+  /* Metrics */
+  .metrics { margin-top: 16px; }
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #1a2a40;
+    font-size: 0.8rem;
+  }
+  .metric .label { color: #6a8da8; }
+  .metric .value { color: #7ec8f0; font-family: 'Courier New', monospace; font-weight: 600; }
+  .metric .value.warning { color: #f0a050; }
+  .metric .value.danger { color: #f06060; }
+  .metric .value.good { color: #60d080; }
+
+  /* Canvases */
+  .circuit-panel { grid-column: 2; grid-row: 1; min-height: 300px; }
+  #circuitCanvas { width: 100%; height: 280px; border-radius: 6px; display: block; }
+
+  .plots-panel { grid-column: 2; grid-row: 2; }
+  .plots-row { display: flex; gap: 8px; }
+  #ciCanvas { flex: 1; height: 240px; border-radius: 6px; display: block; min-width: 0; }
+  #zfCanvas { flex: 1; height: 240px; border-radius: 6px; display: block; min-width: 0; }
+
+  /* Info panel */
+  .info-panel { grid-column: 3; grid-row: 1 / 3; font-size: 0.78rem; line-height: 1.6; color: #6a8da8; }
+  .info-panel p { margin-bottom: 8px; }
+  .info-panel code { color: #7ec8f0; background: #1a2a40; padding: 1px 5px; border-radius: 3px; }
+
+  .equation-box {
+    background: #0d1a2a;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #8ab4d0;
+    line-height: 2;
+  }
+
+  .insight-box {
+    background: #0d2a1a;
+    border: 1px solid #1e5030;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  .insight-box h2 { color: #60d080; margin-bottom: 6px; }
+  .insight-box p { color: #a0d8b0; font-size: 0.82rem; line-height: 1.5; }
+
+  .info-text { margin-bottom: 14px; }
+
+  .def { margin-bottom: 8px; font-size: 0.76rem; }
+  .def strong { color: #8ab4d0; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      max-width: 600px;
+    }
+    .controls { grid-column: 1; grid-row: auto; }
+    .circuit-panel { grid-column: 1; grid-row: auto; min-height: 240px; }
+    .plots-panel { grid-column: 1; grid-row: auto; }
+    .info-panel { grid-column: 1; grid-row: auto; }
+    #circuitCanvas { height: 260px; }
+    .plots-row { flex-direction: column; }
+    #ciCanvas, #zfCanvas { height: 200px; }
+  }
+
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; padding: 12px 8px 4px; }
+    .subtitle { font-size: 0.8rem; margin-bottom: 8px; }
+    .container { padding: 0 8px 12px; gap: 8px; }
+    .panel { padding: 12px; }
+    #circuitCanvas { height: 220px; }
+    #ciCanvas, #zfCanvas { height: 180px; }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    .preset-btn, .inst-btn, .freq-preset-btn { padding: 12px; min-height: 44px; }
+    .toggle-row button { padding: 10px 6px; min-height: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Instrument Loading &amp; Measurement Error</h1>
+<p class="subtitle">Based on HMC E80 Lab 2 &mdash; Basic Electrical Measurements</p>
+
+<div class="container">
+  <!-- Controls -->
+  <div class="panel controls">
+    <h2>Lab Configurations</h2>
+    <div class="preset-row">
+      <button class="preset-btn" data-r1="1" data-r2="1.301">10/20&Omega;</button>
+      <button class="preset-btn active" data-r1="3" data-r2="3.301">1k/2k&Omega;</button>
+      <button class="preset-btn" data-r1="5" data-r2="5.301">100k/200k&Omega;</button>
+      <button class="preset-btn" data-r1="7" data-r2="7.301">10M/20M&Omega;</button>
+    </div>
+
+    <h2>Resistors</h2>
+    <div class="slider-group">
+      <label>R<sub>1</sub> <span id="r1Val">1.00 k&Omega;</span></label>
+      <input type="range" id="r1Slider" min="1" max="7" step="0.01" value="3">
+    </div>
+    <div class="slider-group">
+      <label>R<sub>2</sub> <span id="r2Val">2.00 k&Omega;</span></label>
+      <input type="range" id="r2Slider" min="1" max="7.5" step="0.01" value="3.301">
+    </div>
+    <div class="slider-group">
+      <label>Tolerance <span id="tolVal">&plusmn;5%</span></label>
+      <div class="toggle-row">
+        <button class="tol-btn" data-tol="0.01">1%</button>
+        <button class="tol-btn active" data-tol="0.05">5%</button>
+        <button class="tol-btn" data-tol="0.10">10%</button>
+      </div>
+    </div>
+    <div class="slider-group">
+      <label>V<sub>pp</sub> (source) <span id="vppVal">2.00 V</span></label>
+      <input type="range" id="vppSlider" min="0.5" max="5" step="0.1" value="2.0">
+    </div>
+
+    <h2>Signal Frequency</h2>
+    <div class="slider-group">
+      <label>f <span id="freqVal">200 Hz</span></label>
+      <input type="range" id="freqSlider" min="1" max="6" step="0.01" value="2.301">
+    </div>
+    <div class="freq-preset-row">
+      <button class="freq-preset-btn active" data-freq="2.301">200 Hz</button>
+      <button class="freq-preset-btn" data-freq="5.243">175 kHz</button>
+    </div>
+
+    <h2>Measuring Instrument</h2>
+    <div class="instrument-btns">
+      <button class="inst-btn active" data-idx="0" style="border-left: 3px solid #f0a050">Multimeter (10 M&Omega;)</button>
+      <button class="inst-btn" data-idx="1" style="border-left: 3px solid #a080f0">Scope 1x (1 M&Omega; &Vert; 100 pF)</button>
+      <button class="inst-btn" data-idx="2" style="border-left: 3px solid #50c8f0">Scope 10x (10 M&Omega; &Vert; 11 pF)</button>
+      <button class="inst-btn" data-idx="3" style="border-left: 3px solid #60d080">Teensy ADC (1 k&Omega; &Vert; 100 pF)</button>
+    </div>
+
+    <h2>Op-Amp Buffer</h2>
+    <div class="toggle-row">
+      <button id="bufferOff" class="active">OFF</button>
+      <button id="bufferOn">ON</button>
+    </div>
+    <div id="bufferBadge" class="buffer-badge off">No buffer &mdash; instrument loads circuit</div>
+
+    <div class="metrics">
+      <h2>Measurements</h2>
+      <div class="metric"><span class="label">V<sub>rms</sub> (input)</span><span class="value" id="vrmsinVal">--</span></div>
+      <div class="metric"><span class="label">V<sub>ideal</sub> (no loading)</span><span class="value" id="videalVal">--</span></div>
+      <div class="metric"><span class="label">V<sub>measured</sub></span><span class="value" id="vmeasVal">--</span></div>
+      <div class="metric"><span class="label">Loading error</span><span class="value" id="errorVal">--</span></div>
+      <div class="metric"><span class="label">|Z<sub>inst</sub>| at f</span><span class="value" id="zinstVal">--</span></div>
+      <div class="metric"><span class="label">X<sub>C</sub> at f</span><span class="value" id="xcVal">--</span></div>
+      <div class="metric"><span class="label">|Z| / R</span><span class="value" id="zrRatioVal">--</span></div>
+      <div class="metric"><span class="label">&sigma;<sub>V</sub> (&plusmn;1&sigma;)</span><span class="value" id="sigmaVal">--</span></div>
+    </div>
+  </div>
+
+  <!-- Circuit diagram -->
+  <div class="panel circuit-panel">
+    <h2>Circuit Diagram &mdash; Voltage Divider with Instrument</h2>
+    <canvas id="circuitCanvas"></canvas>
+  </div>
+
+  <!-- Bottom plots: CI + Z(f) side by side -->
+  <div class="panel plots-panel">
+    <h2>All Instruments &mdash; Confidence Intervals &amp; Impedance vs Frequency</h2>
+    <div class="plots-row">
+      <canvas id="ciCanvas"></canvas>
+      <canvas id="zfCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="panel info-panel">
+    <h2>Equations</h2>
+    <div class="equation-box">
+      V<sub>rms</sub> = V<sub>pp</sub> / (2&radic;2)<br>
+      V<sub>ideal</sub> = V<sub>rms</sub> &middot; R<sub>2</sub> / (R<sub>1</sub> + R<sub>2</sub>)<br>
+      R<sub>eff</sub> = R<sub>2</sub> &Vert; Z<sub>inst</sub><br>
+      V<sub>loaded</sub> = V<sub>rms</sub> &middot; R<sub>eff</sub> / (R<sub>1</sub> + R<sub>eff</sub>)<br>
+      <hr style="border-color:#1e3450; margin: 4px 0;">
+      |Z| = R / &radic;(1 + (2&pi;fRC)&sup2;)<br>
+      X<sub>C</sub> = 1 / (2&pi;fC)
+    </div>
+
+    <div class="insight-box" id="insightBox">
+      <h2>Key Insight</h2>
+      <p id="insightText">Loading is negligible when |Z<sub>inst</sub>| &Gt; R<sub>2</sub>.</p>
+    </div>
+
+    <h2>How It Works</h2>
+    <div class="info-text">
+      <p>A voltmeter has finite <strong>input impedance</strong> Z<sub>inst</sub>. When connected, it draws current and changes the voltage.</p>
+      <p>Real instruments have <strong>parallel capacitance</strong> (R &Vert; C), making impedance <em>decrease</em> at higher frequencies. The capacitor provides a lower-impedance AC path.</p>
+      <p>This <strong>loading effect</strong> is worst when |Z<sub>inst</sub>| &asymp; R<sub>2</sub>. A <strong>buffer</strong> (op-amp follower) eliminates loading by presenting very high input impedance.</p>
+      <p><strong>Try:</strong> Switch between 200 Hz and 175 kHz to see how capacitance affects different instruments!</p>
+    </div>
+
+    <h2>Definitions</h2>
+    <div class="def"><strong>Loading:</strong> Change in circuit behavior caused by the measurement device drawing current.</div>
+    <div class="def"><strong>V<sub>rms</sub>:</strong> Root-mean-square voltage. For a sine wave, V<sub>rms</sub> = V<sub>pp</sub> / 2&radic;2.</div>
+    <div class="def"><strong>R &Vert; C:</strong> Parallel impedance. |Z| = R / &radic;(1 + (2&pi;fRC)&sup2;). Always &le; R.</div>
+    <div class="def"><strong>X<sub>C</sub>:</strong> Capacitive reactance = 1/(2&pi;fC). When X<sub>C</sub> &Gt; R, capacitance is negligible.</div>
+    <div class="def"><strong>&sigma;<sub>V</sub>:</strong> Uncertainty in voltage from error propagation of component tolerances.</div>
+  </div>
+</div>
+
+<script>
+// ── Instrument definitions (R||C model) ──
+const INSTRUMENTS = [
+  { name: 'Multimeter',  R: 10e6,  C: 0,       color: '#f0a050', abbr: 'DMM' },
+  { name: 'Scope 1x',    R: 1e6,   C: 100e-12, color: '#a080f0', abbr: '1x'  },
+  { name: 'Scope 10x',   R: 10e6,  C: 11e-12,  color: '#50c8f0', abbr: '10x' },
+  { name: 'Teensy ADC',  R: 1e3,   C: 100e-12, color: '#60d080', abbr: 'ADC' },
+];
+
+// ── State ──
+let R1 = 1000, R2 = 2000;
+let Vpp = 2.0;
+let tolerance = 0.05;
+let freq = 200;
+let selInst = 0;
+let bufferOn = false;
+let animTime = 0;
+
+// ── DOM refs ──
+const r1Slider     = document.getElementById('r1Slider');
+const r2Slider     = document.getElementById('r2Slider');
+const vppSlider    = document.getElementById('vppSlider');
+const freqSlider   = document.getElementById('freqSlider');
+const circuitCanvas = document.getElementById('circuitCanvas');
+const ciCanvas      = document.getElementById('ciCanvas');
+const zfCanvas      = document.getElementById('zfCanvas');
+const circCtx = circuitCanvas.getContext('2d');
+const ciCtx   = ciCanvas.getContext('2d');
+const zfCtx   = zfCanvas.getContext('2d');
+
+// ── Resize ──
+function resize() {
+  [circuitCanvas, ciCanvas, zfCanvas].forEach(c => {
+    c.width  = c.clientWidth * devicePixelRatio;
+    c.height = c.clientHeight * devicePixelRatio;
+    c.getContext('2d').setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  });
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Helpers ──
+function formatR(R) {
+  if (R >= 1e6) return (R / 1e6).toFixed(R >= 10e6 ? 0 : 1) + ' M\u03A9';
+  if (R >= 1e3) return (R / 1e3).toFixed(R >= 10e3 ? 0 : 1) + ' k\u03A9';
+  return R.toFixed(0) + ' \u03A9';
+}
+function formatV(V) {
+  if (Math.abs(V) < 0.001) return V.toExponential(2) + ' V';
+  if (Math.abs(V) < 1) return (V * 1000).toFixed(1) + ' mV';
+  return V.toFixed(4) + ' V';
+}
+function formatFreq(f) {
+  if (f >= 1e6) return (f / 1e6).toFixed(f >= 10e6 ? 0 : 1) + ' MHz';
+  if (f >= 1e3) return (f / 1e3).toFixed(f >= 10e3 ? 0 : 1) + ' kHz';
+  return f.toFixed(0) + ' Hz';
+}
+function formatC(C) {
+  if (C <= 0) return '0';
+  if (C >= 1e-6) return (C * 1e6).toFixed(1) + ' \u03BCF';
+  if (C >= 1e-9) return (C * 1e9).toFixed(0) + ' nF';
+  return (C * 1e12).toFixed(0) + ' pF';
+}
+function formatCurrent(I) {
+  if (I >= 1) return I.toFixed(2) + 'A';
+  if (I >= 1e-3) return (I * 1e3).toFixed(1) + 'mA';
+  if (I >= 1e-6) return (I * 1e6).toFixed(1) + '\u03BCA';
+  return (I * 1e9).toFixed(0) + 'nA';
+}
+function par(a, b) { return (a * b) / (a + b); }
+
+// ── Impedance model ──
+function instImpedance(R, C, f) {
+  if (C <= 0) return R;
+  return R / Math.sqrt(1 + Math.pow(2 * Math.PI * f * R * C, 2));
+}
+
+function capReactance(C, f) {
+  if (C <= 0) return Infinity;
+  return 1 / (2 * Math.PI * f * C);
+}
+
+// ── Physics ──
+function compute(R1, R2, Zinst, Vrms, buffered) {
+  const Videal = Vrms * R2 / (R1 + R2);
+  const Reff = buffered ? R2 : par(R2, Zinst);
+  const Vloaded = Vrms * Reff / (R1 + Reff);
+  const errorPct = Videal !== 0 ? Math.abs(Videal - Vloaded) / Math.abs(Videal) * 100 : 0;
+  return { Videal, Vloaded, Reff, errorPct };
+}
+
+function computeSigma(R1, R2, Zinst, Vrms, tol, buffered) {
+  const Reff = buffered ? R2 : par(R2, Zinst);
+  const sigR1 = R1 * tol;
+  const sigR2 = R2 * tol;
+  const dVdR1 = -Vrms * Reff / Math.pow(R1 + Reff, 2);
+  let dVdR2;
+  if (buffered) {
+    dVdR2 = Vrms * R1 / Math.pow(R1 + R2, 2);
+  } else {
+    const dReffdR2 = Math.pow(Zinst, 2) / Math.pow(R2 + Zinst, 2);
+    const dVdReff = Vrms * R1 / Math.pow(R1 + Reff, 2);
+    dVdR2 = dVdReff * dReffdR2;
+  }
+  return Math.sqrt(Math.pow(dVdR1 * sigR1, 2) + Math.pow(dVdR2 * sigR2, 2));
+}
+
+// ── Read sliders ──
+function readSliders() {
+  R1 = Math.pow(10, parseFloat(r1Slider.value));
+  R2 = Math.pow(10, parseFloat(r2Slider.value));
+  Vpp = parseFloat(vppSlider.value);
+  freq = Math.pow(10, parseFloat(freqSlider.value));
+
+  document.getElementById('r1Val').textContent = formatR(R1);
+  document.getElementById('r2Val').textContent = formatR(R2);
+  document.getElementById('vppVal').textContent = Vpp.toFixed(2) + ' V';
+  document.getElementById('tolVal').textContent = '\u00B1' + (tolerance * 100).toFixed(0) + '%';
+  document.getElementById('freqVal').textContent = formatFreq(freq);
+
+  // Update freq preset highlighting
+  document.querySelectorAll('.freq-preset-btn').forEach(btn => {
+    const btnFreq = Math.pow(10, parseFloat(btn.dataset.freq));
+    btn.classList.toggle('active', Math.abs(freq - btnFreq) / btnFreq < 0.01);
+  });
+
+  updateMetrics();
+}
+
+function updateMetrics() {
+  const Vrms = Vpp / (2 * Math.sqrt(2));
+  const inst = INSTRUMENTS[selInst];
+  const Zinst = instImpedance(inst.R, inst.C, freq);
+  const Xc = capReactance(inst.C, freq);
+  const res = compute(R1, R2, Zinst, Vrms, bufferOn);
+  const sigma = computeSigma(R1, R2, Zinst, Vrms, tolerance, bufferOn);
+
+  document.getElementById('vrmsinVal').textContent = formatV(Vrms);
+  document.getElementById('videalVal').textContent = formatV(res.Videal);
+  document.getElementById('vmeasVal').textContent = formatV(res.Vloaded);
+
+  const errEl = document.getElementById('errorVal');
+  errEl.textContent = res.errorPct.toFixed(2) + '%';
+  errEl.className = 'value' + (res.errorPct > 10 ? ' danger' : res.errorPct > 2 ? ' warning' : ' good');
+
+  document.getElementById('zinstVal').textContent = formatR(Zinst);
+
+  const xcEl = document.getElementById('xcVal');
+  xcEl.textContent = Xc === Infinity ? '\u221E' : formatR(Xc);
+
+  const zrRatio = Zinst / inst.R;
+  const zrEl = document.getElementById('zrRatioVal');
+  zrEl.textContent = zrRatio.toFixed(3);
+  zrEl.className = 'value' + (zrRatio < 0.5 ? ' danger' : zrRatio < 0.95 ? ' warning' : ' good');
+
+  document.getElementById('sigmaVal').textContent = formatV(sigma);
+
+  // Update insight text
+  const insight = document.getElementById('insightText');
+  const ratio = Zinst / R2;
+  if (bufferOn) {
+    insight.innerHTML = 'The op-amp buffer presents ~infinite input impedance, <strong>eliminating loading</strong> regardless of instrument or circuit impedance.';
+  } else if (zrRatio < 0.5) {
+    insight.innerHTML = '<strong>Capacitance dominates!</strong> At ' + formatFreq(freq) + ', X<sub>C</sub> = ' + formatR(Xc) + ' &lt; R = ' + formatR(inst.R) + '. The capacitor provides a low-impedance AC path, reducing |Z| to ' + formatR(Zinst) + '.';
+  } else if (zrRatio < 0.95 && inst.C > 0) {
+    insight.innerHTML = '<strong>Capacitance is noticeable</strong> at ' + formatFreq(freq) + '. |Z|/R = ' + zrRatio.toFixed(2) + '. Impedance dropped from ' + formatR(inst.R) + ' to ' + formatR(Zinst) + '.';
+  } else if (ratio > 1000) {
+    insight.innerHTML = 'Loading is <strong>negligible</strong> (|Z|/R<sub>2</sub> = ' + (ratio/1000).toFixed(0) + 'k). The instrument barely affects the circuit.';
+  } else if (ratio > 100) {
+    insight.innerHTML = '<strong>Minor loading</strong>. The instrument draws small current, slightly reducing V<sub>out</sub>. Error: ' + res.errorPct.toFixed(1) + '%.';
+  } else if (ratio > 1) {
+    insight.innerHTML = '<strong>Significant loading!</strong> |Z<sub>inst</sub>| is only ' + ratio.toFixed(0) + '&times; R<sub>2</sub>. Consider a 10x probe or buffer.';
+  } else {
+    insight.innerHTML = '<strong>Severe loading!</strong> |Z<sub>inst</sub>| &lt; R<sub>2</sub> &mdash; the instrument dominates the circuit. A buffer is essential.';
+  }
+}
+
+// ── Event listeners ──
+[r1Slider, r2Slider, vppSlider, freqSlider].forEach(s => s.addEventListener('input', readSliders));
+
+// Resistance presets
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    r1Slider.value = this.dataset.r1;
+    r2Slider.value = this.dataset.r2;
+    readSliders();
+  });
+});
+
+// Frequency presets
+document.querySelectorAll('.freq-preset-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    freqSlider.value = this.dataset.freq;
+    readSliders();
+  });
+});
+
+// Tolerance
+document.querySelectorAll('.tol-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tol-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    tolerance = parseFloat(this.dataset.tol);
+    readSliders();
+  });
+});
+
+// Instrument selection
+document.querySelectorAll('.inst-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.inst-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    selInst = parseInt(this.dataset.idx);
+    readSliders();
+  });
+});
+
+// Buffer toggle
+document.getElementById('bufferOff').addEventListener('click', function() {
+  bufferOn = false;
+  this.classList.add('active');
+  document.getElementById('bufferOn').classList.remove('active');
+  const badge = document.getElementById('bufferBadge');
+  badge.textContent = 'No buffer \u2014 instrument loads circuit';
+  badge.className = 'buffer-badge off';
+  readSliders();
+});
+document.getElementById('bufferOn').addEventListener('click', function() {
+  bufferOn = true;
+  this.classList.add('active');
+  document.getElementById('bufferOff').classList.remove('active');
+  const badge = document.getElementById('bufferBadge');
+  badge.textContent = 'Buffer active \u2014 loading eliminated';
+  badge.className = 'buffer-badge on';
+  readSliders();
+});
+
+// ── Drawing: Resistor (vertical) ──
+function drawResistorV(ctx, x, y1, y2, color) {
+  const len = y2 - y1;
+  const lead = len * 0.18;
+  const bodyLen = len - 2 * lead;
+  const amp = 8;
+  const segs = 6;
+  const segLen = bodyLen / (segs + 1);
+
+  ctx.strokeStyle = color || '#6a9cc0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y1);
+  ctx.lineTo(x, y1 + lead);
+  ctx.lineTo(x + amp, y1 + lead + segLen * 0.5);
+  for (let i = 1; i < segs; i++) {
+    ctx.lineTo(x + (i % 2 === 0 ? 1 : -1) * amp, y1 + lead + segLen * (i + 0.5));
+  }
+  ctx.lineTo(x, y2 - lead);
+  ctx.lineTo(x, y2);
+  ctx.stroke();
+}
+
+// ── Drawing: Capacitor (vertical) ──
+function drawCapacitorV(ctx, x, y1, y2, color) {
+  const mid = (y1 + y2) / 2;
+  const plateGap = 6;
+  const plateW = 12;
+
+  ctx.strokeStyle = color || '#6a9cc0';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, mid - plateGap); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - plateW / 2, mid - plateGap); ctx.lineTo(x + plateW / 2, mid - plateGap); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - plateW / 2, mid + plateGap); ctx.lineTo(x + plateW / 2, mid + plateGap); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, mid + plateGap); ctx.lineTo(x, y2); ctx.stroke();
+}
+
+// ── Drawing: Parallel R||C ──
+function drawParallelRC(ctx, x, y1, y2, R, C, color) {
+  if (C <= 0) {
+    drawResistorV(ctx, x, y1, y2, color);
+    return;
+  }
+
+  const spread = 18;
+  const topJuncY = y1 + (y2 - y1) * 0.08;
+  const botJuncY = y2 - (y2 - y1) * 0.08;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  // Top wire to split
+  ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, topJuncY); ctx.stroke();
+  // Split left
+  ctx.beginPath(); ctx.moveTo(x, topJuncY); ctx.lineTo(x - spread, topJuncY); ctx.stroke();
+  // Split right
+  ctx.beginPath(); ctx.moveTo(x, topJuncY); ctx.lineTo(x + spread, topJuncY); ctx.stroke();
+
+  // R on left, C on right
+  drawResistorV(ctx, x - spread, topJuncY, botJuncY, color);
+  drawCapacitorV(ctx, x + spread, topJuncY, botJuncY, color);
+
+  // Merge
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - spread, botJuncY); ctx.lineTo(x, botJuncY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + spread, botJuncY); ctx.lineTo(x, botJuncY); ctx.stroke();
+  // Bottom wire
+  ctx.beginPath(); ctx.moveTo(x, botJuncY); ctx.lineTo(x, y2); ctx.stroke();
+}
+
+// ── Drawing: Ground symbol ──
+function drawGround(ctx, x, y) {
+  ctx.strokeStyle = '#4a6a80';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 10, y); ctx.lineTo(x + 10, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 6, y + 4); ctx.lineTo(x + 6, y + 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 3, y + 8); ctx.lineTo(x + 3, y + 8); ctx.stroke();
+}
+
+// ── Drawing: Wire ──
+function drawWire(ctx, x1, y1, x2, y2, color) {
+  ctx.strokeStyle = color || '#4a7090';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+// ── Drawing: Junction dot ──
+function drawJunction(ctx, x, y) {
+  ctx.fillStyle = '#7ec8f0';
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ── Drawing: Buffer (op-amp) ──
+function drawBuffer(ctx, x, y, size) {
+  ctx.strokeStyle = '#60d080';
+  ctx.fillStyle = '#0d1a2a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - size, y - size * 0.8);
+  ctx.lineTo(x + size, y);
+  ctx.lineTo(x - size, y + size * 0.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#60d080';
+  ctx.textAlign = 'center';
+  ctx.fillText('1\u00D7', x - 2, y + 3);
+}
+
+// ── Drawing: Current dots ──
+function drawCurrentDots(ctx, x1, y1, x2, y2, currentMag, time, color) {
+  if (currentMag < 1e-12) return;
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 5) return;
+  const numDots = Math.max(2, Math.floor(len / 14));
+  const logI = Math.log10(currentMag * 1e6 + 1);
+  const speed = 15 + logI * 8;
+  const alpha = Math.min(0.85, 0.3 + logI * 0.1);
+  const r = Math.min(3, 1.5 + logI * 0.3);
+
+  ctx.fillStyle = color || ('rgba(120,200,255,' + alpha + ')');
+  for (let i = 0; i < numDots; i++) {
+    let frac = ((i / numDots) + (time * speed / len)) % 1;
+    if (frac < 0) frac += 1;
+    ctx.beginPath();
+    ctx.arc(x1 + frac * dx, y1 + frac * dy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ── Draw circuit canvas ──
+function drawCircuit() {
+  const W = circuitCanvas.clientWidth, H = circuitCanvas.clientHeight;
+  const ctx = circCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  const Vrms = Vpp / (2 * Math.sqrt(2));
+  const inst = INSTRUMENTS[selInst];
+  const Zinst = instImpedance(inst.R, inst.C, freq);
+  const res = compute(R1, R2, Zinst, Vrms, bufferOn);
+
+  // Layout coordinates
+  const divX = W * 0.22;
+  const instX = bufferOn ? W * 0.58 : W * 0.48;
+  const bufX = (divX + instX) / 2;
+  const topY = 15, r1Top = 35;
+  const r1Bot = H * 0.38;
+  const juncY = r1Bot + 8;
+  const r2Top = juncY + 8;
+  const r2Bot = H * 0.82;
+  const gndY = H * 0.9;
+
+  // Currents
+  const Itotal = Vrms / (R1 + res.Reff);
+  const Ir2 = res.Vloaded / R2;
+  const Iinst = bufferOn ? 0 : res.Vloaded / Zinst;
+
+  // Divider branch
+  drawWire(ctx, divX, topY, divX, r1Top);
+  drawResistorV(ctx, divX, r1Top, r1Bot, '#6a9cc0');
+  drawWire(ctx, divX, r1Bot, divX, juncY);
+  drawWire(ctx, divX, juncY, divX, r2Top);
+  drawResistorV(ctx, divX, r2Top, r2Bot, '#6a9cc0');
+  drawWire(ctx, divX, r2Bot, divX, gndY);
+  drawGround(ctx, divX, gndY);
+
+  // Horizontal wire to instrument
+  if (bufferOn) {
+    drawWire(ctx, divX, juncY, bufX - 16, juncY);
+    drawBuffer(ctx, bufX, juncY, 14);
+    drawWire(ctx, bufX + 14, juncY, instX, juncY);
+  } else {
+    drawWire(ctx, divX, juncY, instX, juncY);
+  }
+
+  // Instrument branch (R||C)
+  drawWire(ctx, instX, juncY, instX, r2Top);
+  drawParallelRC(ctx, instX, r2Top, r2Bot, inst.R, inst.C, inst.color);
+  drawWire(ctx, instX, r2Bot, instX, gndY);
+  drawGround(ctx, instX, gndY);
+
+  // Ground rail & junction
+  drawWire(ctx, divX, gndY, instX, gndY, '#3a5a70');
+  drawJunction(ctx, divX, juncY);
+
+  // ── Labels ──
+  ctx.font = 'bold 13px Segoe UI';
+  ctx.fillStyle = '#e0e8f0';
+  ctx.textAlign = 'center';
+  ctx.fillText('Vin', divX, topY - 2);
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#7ec8f0';
+  ctx.fillText(Vpp.toFixed(1) + ' Vpp', divX, topY + 10);
+
+  const r1Mid = (r1Top + r1Bot) / 2;
+  ctx.font = 'bold 11px Segoe UI';
+  ctx.fillStyle = '#8ab4d0';
+  ctx.textAlign = 'left';
+  ctx.fillText('R\u2081', divX + 14, r1Mid - 4);
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#7ec8f0';
+  ctx.fillText(formatR(R1), divX + 14, r1Mid + 10);
+
+  const r2Mid = (r2Top + r2Bot) / 2;
+  ctx.font = 'bold 11px Segoe UI';
+  ctx.fillStyle = '#8ab4d0';
+  ctx.fillText('R\u2082', divX + 14, r2Mid - 4);
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#7ec8f0';
+  ctx.fillText(formatR(R2), divX + 14, r2Mid + 10);
+
+  // Instrument label (R||C with |Z|)
+  const instLabelX = instX + 28;
+  ctx.font = 'bold 11px Segoe UI';
+  ctx.fillStyle = inst.color;
+  ctx.textAlign = 'left';
+  if (inst.C > 0) {
+    ctx.fillText(formatR(inst.R) + ' \u2016 ' + formatC(inst.C), instLabelX, r2Mid - 10);
+    ctx.font = '10px Courier New';
+    ctx.fillText('|Z| = ' + formatR(Zinst), instLabelX, r2Mid + 6);
+  } else {
+    ctx.fillText('Rinst', instLabelX, r2Mid - 4);
+    ctx.font = '10px Courier New';
+    ctx.fillText(formatR(inst.R), instLabelX, r2Mid + 10);
+  }
+  ctx.font = '9px Segoe UI';
+  ctx.fillStyle = inst.color;
+  ctx.fillText(inst.name, instLabelX, r2Mid + 22);
+
+  if (bufferOn) {
+    ctx.font = '10px Segoe UI';
+    ctx.fillStyle = '#60d080';
+    ctx.textAlign = 'center';
+    ctx.fillText('Buffer', bufX, juncY - 20);
+  }
+
+  // ── Current dots ──
+  drawCurrentDots(ctx, divX, topY, divX, juncY, Itotal, animTime, 'rgba(120,200,255,0.7)');
+  drawCurrentDots(ctx, divX, juncY, divX, gndY, Ir2, animTime, 'rgba(120,200,255,0.5)');
+  if (!bufferOn) {
+    drawCurrentDots(ctx, instX, juncY, instX, gndY, Iinst, animTime, inst.color + 'aa');
+  }
+
+  // ── Voltage readout box ──
+  const boxX = W * 0.7, boxY = 16;
+  const boxW = W * 0.28, boxH = 108;
+  ctx.fillStyle = '#0d1a2a';
+  ctx.strokeStyle = '#1e3450';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 6); ctx.fill(); ctx.stroke();
+
+  ctx.strokeStyle = '#2a4a6a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(divX + 4, juncY); ctx.lineTo(boxX, boxY + boxH / 2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const txX = boxX + 10;
+  ctx.textAlign = 'left';
+
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8';
+  ctx.fillText('Videal', txX, boxY + 18);
+  ctx.font = 'bold 13px Courier New'; ctx.fillStyle = '#7ec8f0';
+  ctx.fillText(formatV(res.Videal), txX + 50, boxY + 18);
+
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8';
+  ctx.fillText('Vmeas', txX, boxY + 40);
+  ctx.font = 'bold 13px Courier New'; ctx.fillStyle = inst.color;
+  ctx.fillText(formatV(res.Vloaded), txX + 50, boxY + 40);
+
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8';
+  ctx.fillText('Error', txX, boxY + 62);
+  ctx.font = 'bold 13px Courier New';
+  ctx.fillStyle = res.errorPct > 10 ? '#f06060' : res.errorPct > 2 ? '#f0a050' : '#60d080';
+  ctx.fillText(res.errorPct.toFixed(2) + '%', txX + 50, boxY + 62);
+
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8';
+  ctx.fillText('|Z|/R\u2082', txX, boxY + 84);
+  ctx.font = 'bold 13px Courier New';
+  const ratio = Zinst / R2;
+  ctx.fillStyle = ratio < 10 ? '#f06060' : ratio < 100 ? '#f0a050' : '#60d080';
+  ctx.fillText(ratio >= 1000 ? (ratio / 1000).toFixed(0) + 'k' : ratio.toFixed(1), txX + 50, boxY + 84);
+
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8';
+  ctx.fillText('f', txX, boxY + 102);
+  ctx.font = 'bold 11px Courier New'; ctx.fillStyle = '#8ab4d0';
+  ctx.fillText(formatFreq(freq), txX + 50, boxY + 102);
+
+  // Current labels
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(120,200,255,0.8)';
+  ctx.fillText('I=' + formatCurrent(Itotal), divX - 12, r1Mid);
+  ctx.fillText('I=' + formatCurrent(Ir2), divX - 12, r2Mid);
+  if (!bufferOn && Iinst > 1e-15) {
+    ctx.fillStyle = inst.color;
+    ctx.fillText('I=' + formatCurrent(Iinst), instX - 28, r2Mid);
+  } else if (bufferOn) {
+    ctx.fillStyle = '#60d080';
+    ctx.fillText('I\u22480', instX - 28, r2Mid);
+  }
+}
+
+// ── Draw vertical CI plot ──
+function drawCI() {
+  const W = ciCanvas.clientWidth, H = ciCanvas.clientHeight;
+  const ctx = ciCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  const Vrms = Vpp / (2 * Math.sqrt(2));
+  const Videal = Vrms * R2 / (R1 + R2);
+
+  const data = INSTRUMENTS.map((inst, i) => {
+    const Z = instImpedance(inst.R, inst.C, freq);
+    const r = compute(R1, R2, Z, Vrms, bufferOn);
+    const sigma = computeSigma(R1, R2, Z, Vrms, tolerance, bufferOn);
+    return {
+      abbr: inst.abbr, color: inst.color,
+      Vloaded: r.Vloaded, sigma,
+      ciLow: r.Vloaded - 2 * sigma,
+      ciHigh: r.Vloaded + 2 * sigma,
+      errorPct: r.errorPct,
+      selected: i === selInst,
+    };
+  });
+
+  // Y-axis range
+  let vMin = Videal, vMax = Videal;
+  data.forEach(d => { vMin = Math.min(vMin, d.ciLow); vMax = Math.max(vMax, d.ciHigh); });
+  const vPad = (vMax - vMin) * 0.15 || Videal * 0.1;
+  vMin -= vPad; vMax += vPad;
+  if (vMin < 0) vMin = 0;
+
+  const pad = { l: 52, r: 8, t: 10, b: 50 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+  const colW = pw / 4;
+
+  const vToY = v => pad.t + ph - ((v - vMin) / (vMax - vMin)) * ph;
+
+  // Y gridlines
+  ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1;
+  ctx.font = '9px Courier New'; ctx.fillStyle = '#4a6a80'; ctx.textAlign = 'right';
+  const vRange = vMax - vMin;
+  const tickStep = vRange > 1 ? 0.5 : vRange > 0.1 ? 0.05 : vRange > 0.01 ? 0.005 : 0.0005;
+  for (let v = Math.ceil(vMin / tickStep) * tickStep; v <= vMax; v += tickStep) {
+    const y = vToY(v);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillText(v >= 0.01 ? v.toFixed(v >= 1 ? 2 : 3) : v.toExponential(1), pad.l - 4, y + 3);
+  }
+
+  // Y-axis label
+  ctx.save();
+  ctx.translate(10, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8'; ctx.textAlign = 'center';
+  ctx.fillText('Voltage (Vrms)', 0, 0);
+  ctx.restore();
+
+  // Videal reference line
+  const idealY = vToY(Videal);
+  ctx.strokeStyle = '#7ec8f0'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l - 5, idealY); ctx.lineTo(W - pad.r + 5, idealY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '9px Segoe UI'; ctx.fillStyle = '#7ec8f0'; ctx.textAlign = 'right';
+  ctx.fillText('Videal', pad.l - 4, idealY - 5);
+
+  // Instrument columns
+  data.forEach((d, i) => {
+    const cx = pad.l + colW * (i + 0.5);
+    const barW = colW * 0.4;
+
+    if (d.selected) {
+      ctx.fillStyle = 'rgba(120,200,255,0.04)';
+      ctx.fillRect(pad.l + colW * i, pad.t, colW, ph);
+    }
+
+    // +/-2s band
+    const ciTop = vToY(d.ciHigh), ciBot = vToY(d.ciLow);
+    ctx.fillStyle = d.color + '25'; ctx.strokeStyle = d.color + '60'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(cx - barW / 2, ciTop, barW, ciBot - ciTop, 3); ctx.fill(); ctx.stroke();
+
+    // +/-1s band
+    const s1Top = vToY(d.Vloaded + d.sigma), s1Bot = vToY(d.Vloaded - d.sigma);
+    ctx.fillStyle = d.color + '40';
+    ctx.fillRect(cx - barW / 2 + 2, s1Top, barW - 4, s1Bot - s1Top);
+
+    // Center line
+    const cy = vToY(d.Vloaded);
+    ctx.strokeStyle = d.color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(cx - barW / 2 - 2, cy); ctx.lineTo(cx + barW / 2 + 2, cy); ctx.stroke();
+
+    // Diamond
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 5); ctx.lineTo(cx + 4, cy); ctx.lineTo(cx, cy + 5); ctx.lineTo(cx - 4, cy);
+    ctx.closePath(); ctx.fill();
+
+    // Name below
+    ctx.font = d.selected ? 'bold 11px Segoe UI' : '10px Segoe UI';
+    ctx.fillStyle = d.color; ctx.textAlign = 'center';
+    ctx.fillText(d.abbr, cx, H - pad.b + 16);
+
+    // Error below name
+    ctx.font = '9px Courier New';
+    ctx.fillStyle = d.errorPct > 10 ? '#f06060' : d.errorPct > 2 ? '#f0a050' : '#60d080';
+    ctx.fillText(d.errorPct.toFixed(1) + '%', cx, H - pad.b + 30);
+  });
+
+  // Plot title
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#5a9cc0'; ctx.textAlign = 'center';
+  ctx.fillText('Confidence Intervals (\u00B12\u03C3)', W / 2, H - 4);
+}
+
+// ── Draw |Z| vs frequency plot ──
+function drawZF() {
+  const W = zfCanvas.clientWidth, H = zfCanvas.clientHeight;
+  const ctx = zfCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = { l: 50, r: 10, t: 10, b: 50 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  // Axis ranges (log-log)
+  const fMin = 1, fMax = 6;
+  let zMin = Infinity, zMax = 0;
+  INSTRUMENTS.forEach(inst => {
+    zMax = Math.max(zMax, inst.R);
+    const zHigh = instImpedance(inst.R, inst.C, 1e6);
+    if (zHigh > 0) zMin = Math.min(zMin, zHigh);
+  });
+  const logZMin = Math.floor(Math.log10(Math.max(1, zMin))) - 0.5;
+  const logZMax = Math.ceil(Math.log10(zMax)) + 0.5;
+
+  const fToX = f => pad.l + ((Math.log10(f) - fMin) / (fMax - fMin)) * pw;
+  const zToY = z => pad.t + ph - ((Math.log10(z) - logZMin) / (logZMax - logZMin)) * ph;
+
+  // Freq gridlines (vertical)
+  ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1;
+  ctx.font = '9px Courier New'; ctx.fillStyle = '#4a6a80'; ctx.textAlign = 'center';
+  const fLabels = ['10', '100', '1k', '10k', '100k', '1M'];
+  for (let d = 1; d <= 6; d++) {
+    const x = fToX(Math.pow(10, d));
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, H - pad.b); ctx.stroke();
+    ctx.fillText(fLabels[d - 1], x, H - pad.b + 14);
+  }
+
+  // Impedance gridlines (horizontal)
+  ctx.textAlign = 'right';
+  const zLabels = { 0:'1\u03A9', 1:'10\u03A9', 2:'100\u03A9', 3:'1k\u03A9', 4:'10k\u03A9', 5:'100k\u03A9', 6:'1M\u03A9', 7:'10M\u03A9' };
+  for (let lz = Math.ceil(logZMin); lz <= Math.floor(logZMax); lz++) {
+    const y = zToY(Math.pow(10, lz));
+    ctx.strokeStyle = '#1a2a3a';
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillText(zLabels[lz] || '', pad.l - 4, y + 3);
+  }
+
+  // Axis labels
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#6a8da8'; ctx.textAlign = 'center';
+  ctx.fillText('Frequency (Hz)', pad.l + pw / 2, H - pad.b + 30);
+  ctx.save();
+  ctx.translate(10, pad.t + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('|Z| (\u03A9)', 0, 0);
+  ctx.restore();
+
+  // Draw impedance curves
+  const numPts = 200;
+  INSTRUMENTS.forEach((inst, idx) => {
+    ctx.strokeStyle = inst.color;
+    ctx.lineWidth = idx === selInst ? 2.5 : 1.5;
+    ctx.globalAlpha = idx === selInst ? 1.0 : 0.6;
+    ctx.beginPath();
+    for (let i = 0; i <= numPts; i++) {
+      const logF = fMin + (fMax - fMin) * i / numPts;
+      const f = Math.pow(10, logF);
+      const z = instImpedance(inst.R, inst.C, f);
+      const x = fToX(f), y = zToY(z);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1.0;
+
+  // Curve labels at right edge
+  INSTRUMENTS.forEach((inst, idx) => {
+    const z = instImpedance(inst.R, inst.C, 1e6);
+    const y = zToY(z);
+    ctx.font = idx === selInst ? 'bold 10px Segoe UI' : '9px Segoe UI';
+    ctx.fillStyle = inst.color; ctx.textAlign = 'right';
+    ctx.fillText(inst.abbr, W - pad.r - 4, y - 4);
+  });
+
+  // Current frequency marker
+  const markerX = fToX(freq);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(markerX, pad.t); ctx.lineTo(markerX, H - pad.b); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dots on curves at current freq
+  INSTRUMENTS.forEach((inst, idx) => {
+    const z = instImpedance(inst.R, inst.C, freq);
+    const y = zToY(z);
+    ctx.fillStyle = inst.color;
+    ctx.beginPath();
+    ctx.arc(markerX, y, idx === selInst ? 5 : 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    if (idx === selInst) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+  });
+
+  // Marker label
+  ctx.font = '9px Courier New'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+  ctx.fillText(formatFreq(freq), markerX, pad.t - 2);
+
+  // Plot title
+  ctx.font = '10px Segoe UI'; ctx.fillStyle = '#5a9cc0'; ctx.textAlign = 'center';
+  ctx.fillText('|Z| vs Frequency', W / 2, H - 4);
+}
+
+// ── Animation loop ──
+function loop() {
+  animTime += 0.016;
+  drawCircuit();
+  drawCI();
+  drawZF();
+  requestAnimationFrame(loop);
+}
+
+// ── Initialize ──
+readSliders();
+loop();
+</script>
+</body>
+</html>
