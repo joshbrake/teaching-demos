@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beam Analysis: Shear &amp; Moment Diagrams</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0a1628;
+    color: #e0e8f0;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-align: center;
+    padding: 18px 0 4px;
+    font-size: 1.6rem;
+    color: #7ec8f0;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6a8da8;
+    margin-bottom: 12px;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 280px 1fr 240px;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+  }
+
+  /* Panels */
+  .panel {
+    background: #111e30;
+    border: 1px solid #1e3450;
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #5a9cc0;
+    margin-bottom: 12px;
+  }
+
+  /* Controls panel */
+  .controls { grid-column: 1; grid-row: 1 / 4; }
+  .slider-group { margin-bottom: 14px; }
+  .slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: #8ab4d0;
+    margin-bottom: 6px;
+  }
+  .slider-group label span { color: #7ec8f0; font-weight: 600; font-family: 'Courier New', monospace; }
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e3450;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #4a9ece;
+    cursor: pointer;
+    border: 2px solid #7ec8f0;
+  }
+
+  /* Support type toggle */
+  .support-row { margin-bottom: 12px; }
+  .support-row .sup-label {
+    font-size: 0.82rem; color: #8ab4d0; margin-bottom: 6px;
+  }
+  .type-toggle {
+    display: flex; border: 1px solid #1e3450; border-radius: 6px; overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .type-toggle button {
+    flex: 1; border: none; border-radius: 0; padding: 7px 4px; font-size: 0.72rem;
+    font-weight: 600; letter-spacing: 0.3px; background: #162840; color: #7ec8f0;
+    cursor: pointer; transition: background 0.2s; border-right: 1px solid #1e3450;
+  }
+  .type-toggle button:last-child { border-right: none; }
+  .type-toggle button:hover { background: #1e3a58; }
+  .type-toggle button.active { background: #2a5a80; color: #b0e0ff; }
+
+  /* Load controls */
+  .load-group {
+    background: #0d1a2a;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .load-group .load-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .load-group .load-title {
+    font-size: 0.78rem; font-weight: 600; color: #e08060;
+  }
+  .load-group .remove-btn {
+    background: none; border: 1px solid #4a2020; color: #e06060;
+    padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer;
+    flex: none;
+  }
+  .load-group .remove-btn:hover { background: #2a1010; }
+
+  /* Metrics */
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid #1a2a40;
+    font-size: 0.82rem;
+  }
+  .metric .label { color: #6a8da8; }
+  .metric .value { color: #7ec8f0; font-family: 'Courier New', monospace; font-weight: 600; }
+  .metric .value.warning { color: #f0a050; }
+  .metric .value.danger { color: #f06060; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #2a4a6a;
+    border-radius: 6px;
+    background: #162840;
+    color: #7ec8f0;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover { background: #1e3a58; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .add-btn { background: #1a2a40; border-color: #2a5a6a; color: #60c0d0; }
+  .add-btn:hover { background: #1e3850; }
+
+  /* Preset buttons */
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .preset-row button { font-size: 0.72rem; padding: 6px 8px; flex: none; }
+
+  /* Center canvases */
+  .beam-panel { grid-column: 2; grid-row: 1; }
+  #beamCanvas { width: 100%; height: 220px; border-radius: 6px; display: block; cursor: crosshair; }
+
+  .shear-panel { grid-column: 2; grid-row: 2; }
+  #shearCanvas { width: 100%; height: 170px; border-radius: 6px; display: block; }
+
+  .moment-panel { grid-column: 2; grid-row: 3; }
+  #momentCanvas { width: 100%; height: 170px; border-radius: 6px; display: block; }
+
+  /* Right panels */
+  .reactions-panel { grid-column: 3; grid-row: 1; }
+  .info-panel { grid-column: 3; grid-row: 2 / 4; font-size: 0.78rem; line-height: 1.6; color: #6a8da8; }
+  .info-panel p { margin-bottom: 8px; }
+  .info-panel code { color: #7ec8f0; background: #1a2a40; padding: 1px 5px; border-radius: 3px; }
+
+  /* Warning badge */
+  .warning-badge {
+    text-align: center; padding: 8px; border-radius: 6px;
+    font-size: 0.82rem; font-weight: 600; margin-top: 10px;
+    background: #3a2a1a; color: #e0a040; border: 1px solid #6a5030;
+    display: none;
+  }
+  .warning-badge.visible { display: block; }
+
+  /* Equation box */
+  .equation-box {
+    background: #0d1a2a;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    color: #8ab4d0;
+    line-height: 1.8;
+  }
+
+  /* Sign convention diagram */
+  .convention-box {
+    background: #0d1a2a;
+    border: 1px solid #1e3450;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    font-size: 0.72rem;
+    color: #6a8da8;
+    line-height: 1.6;
+  }
+  .convention-box .pos { color: #4ac0f0; }
+  .convention-box .neg { color: #f0a050; }
+
+  /* Hover tooltip */
+  .hover-info {
+    position: absolute;
+    background: #0d1a2acc;
+    border: 1px solid #2a5a80;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    font-family: 'Courier New', monospace;
+    color: #b0e0ff;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      max-width: 600px;
+    }
+    .controls { grid-column: 1; grid-row: auto; }
+    .beam-panel { grid-column: 1; grid-row: auto; }
+    .shear-panel { grid-column: 1; grid-row: auto; }
+    .moment-panel { grid-column: 1; grid-row: auto; }
+    .reactions-panel { grid-column: 1; grid-row: auto; }
+    .info-panel { grid-column: 1; grid-row: auto; }
+    #beamCanvas { height: 180px; }
+    #shearCanvas { height: 140px; }
+    #momentCanvas { height: 140px; }
+  }
+  @media (max-width: 480px) {
+    body { font-size: 14px; }
+    h1 { font-size: 1.2rem; padding: 12px 8px 4px; }
+    .subtitle { font-size: 0.8rem; margin-bottom: 8px; }
+    .container { padding: 0 8px 12px; gap: 8px; }
+    .panel { padding: 12px; }
+    #beamCanvas { height: 150px; }
+    #shearCanvas { height: 120px; }
+    #momentCanvas { height: 120px; }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    button { padding: 10px; font-size: 0.82rem; min-height: 44px; }
+    .type-toggle button { min-height: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Beam Analysis: Shear &amp; Moment Diagrams</h1>
+<p class="subtitle">Interactive support reactions, V(x), and M(x) for statically determinate beams</p>
+
+<div class="container">
+  <!-- LEFT: Controls -->
+  <div class="panel controls">
+    <h2>Beam</h2>
+    <div class="slider-group">
+      <label>Length (m) <span id="lengthVal">6.0</span></label>
+      <input type="range" id="lengthSlider" min="2" max="12" step="0.5" value="6">
+    </div>
+
+    <h2>Support A</h2>
+    <div class="support-row">
+      <div class="type-toggle" id="supAToggle">
+        <button data-type="pin" class="active">Pin</button>
+        <button data-type="roller">Roller</button>
+        <button data-type="fixed">Fixed</button>
+        <button data-type="none">None</button>
+      </div>
+      <div class="slider-group">
+        <label>Position (m) <span id="supAVal">0.0</span></label>
+        <input type="range" id="supASlider" min="0" max="12" step="0.1" value="0">
+      </div>
+    </div>
+
+    <h2>Support B</h2>
+    <div class="support-row">
+      <div class="type-toggle" id="supBToggle">
+        <button data-type="pin">Pin</button>
+        <button data-type="roller" class="active">Roller</button>
+        <button data-type="fixed">Fixed</button>
+        <button data-type="none">None</button>
+      </div>
+      <div class="slider-group">
+        <label>Position (m) <span id="supBVal">6.0</span></label>
+        <input type="range" id="supBSlider" min="0" max="12" step="0.1" value="6">
+      </div>
+    </div>
+
+    <h2>Loads</h2>
+    <div id="loadControls"></div>
+    <div class="btn-row">
+      <button class="add-btn" id="addPointBtn">+ Point Load</button>
+      <button class="add-btn" id="addDistBtn">+ Distributed</button>
+    </div>
+
+    <h2>Presets</h2>
+    <div class="preset-row">
+      <button id="presetCantilever">Cantilever</button>
+      <button id="presetSS">Simply Supported</button>
+      <button id="presetOverhang">Overhang</button>
+    </div>
+
+    <div class="btn-row" style="margin-top: 14px;">
+      <button id="resetBtn">Reset</button>
+      <button id="fbdBtn">Show FBD</button>
+    </div>
+
+    <div id="warningBadge" class="warning-badge"></div>
+  </div>
+
+  <!-- CENTER: Beam Diagram -->
+  <div class="panel beam-panel" style="position:relative;">
+    <h2>Beam Diagram</h2>
+    <canvas id="beamCanvas"></canvas>
+    <div id="hoverTooltip" class="hover-info"></div>
+  </div>
+
+  <!-- CENTER: Shear Force -->
+  <div class="panel shear-panel">
+    <h2>Shear Force V(x)</h2>
+    <canvas id="shearCanvas"></canvas>
+  </div>
+
+  <!-- CENTER: Bending Moment -->
+  <div class="panel moment-panel">
+    <h2>Bending Moment M(x)</h2>
+    <canvas id="momentCanvas"></canvas>
+  </div>
+
+  <!-- RIGHT: Reactions -->
+  <div class="panel reactions-panel">
+    <h2>Reactions</h2>
+    <div class="metric"><span class="label">R<sub>A</sub> (kN)</span><span class="value" id="raVal">--</span></div>
+    <div class="metric"><span class="label">R<sub>B</sub> (kN)</span><span class="value" id="rbVal">--</span></div>
+    <div class="metric" id="maRow" style="display:none;"><span class="label">M<sub>A</sub> (kN&middot;m)</span><span class="value" id="maVal">--</span></div>
+
+    <h2 style="margin-top:14px;">Equilibrium</h2>
+    <div class="metric"><span class="label">&Sigma;F<sub>y</sub></span><span class="value" id="sumFyVal">--</span></div>
+    <div class="metric"><span class="label">&Sigma;M<sub>A</sub></span><span class="value" id="sumMVal">--</span></div>
+
+    <h2 style="margin-top:14px;">Extremes</h2>
+    <div class="metric"><span class="label">V<sub>max</sub> (kN)</span><span class="value" id="vmaxVal">--</span></div>
+    <div class="metric"><span class="label">M<sub>max</sub> (kN&middot;m)</span><span class="value" id="mmaxVal">--</span></div>
+    <div class="metric"><span class="label">M<sub>max</sub> at x</span><span class="value" id="mmaxXVal">--</span></div>
+  </div>
+
+  <!-- RIGHT: Info -->
+  <div class="panel info-panel">
+    <h2>Concepts</h2>
+    <div id="conceptText">
+      <p><strong>Support reactions</strong> are forces (and moments) that keep the beam in static equilibrium.</p>
+      <p>The <strong>shear force V(x)</strong> at any section equals the sum of vertical forces to the left of that section.</p>
+      <p>The <strong>bending moment M(x)</strong> equals the sum of moments of all forces to the left about that section.</p>
+      <p><strong>Key relationship:</strong> <code>dM/dx = V(x)</code>, so M is maximum where V = 0.</p>
+    </div>
+
+    <div class="convention-box">
+      <strong>Sign Convention</strong><br>
+      <span class="pos">+V</span>: left part pushes up<br>
+      <span class="pos">+M</span>: sagging (concave up)<br>
+      <span class="neg">&minus;M</span>: hogging (concave down)
+    </div>
+
+    <div class="equation-box">
+      &Sigma;F<sub>y</sub> = 0 &emsp; &Sigma;M = 0<br>
+      V(x) = &Sigma;F left of x<br>
+      M(x) = &Sigma;M left of x<br>
+      dV/dx = &minus;w(x) &emsp; dM/dx = V(x)
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let beamLength = 6.0;
+let supports = [
+  { id: 'A', type: 'pin', x: 0.0 },
+  { id: 'B', type: 'roller', x: 6.0 }
+];
+let loadIdCounter = 1;
+function nextLoadId() { return 'L' + (loadIdCounter++); }
+let loads = [
+  { id: nextLoadId(), kind: 'point', x: 3.0, magnitude: -10.0 }
+];
+
+// Computed
+let reactions = { RA: 0, RB: 0, MA: 0 };
+let shearData = [];
+let momentData = [];
+let maxShear = { value: 0, x: 0 };
+let maxMoment = { value: 0, x: 0 };
+let configValid = true;
+let configMessage = '';
+
+// UI state
+let showFBD = true;
+let hoveredX = null;
+let dragState = null;
+
+// ── DOM refs ──
+const beamCanvas = document.getElementById('beamCanvas');
+const shearCanvas = document.getElementById('shearCanvas');
+const momentCanvas = document.getElementById('momentCanvas');
+const beamCtx = beamCanvas.getContext('2d');
+const shearCtx = shearCanvas.getContext('2d');
+const momentCtx = momentCanvas.getContext('2d');
+const tooltip = document.getElementById('hoverTooltip');
+
+// ── Canvas resize ──
+function resize() {
+  [beamCanvas, shearCanvas, momentCanvas].forEach(c => {
+    c.width = c.clientWidth * devicePixelRatio;
+    c.height = c.clientHeight * devicePixelRatio;
+    c.getContext('2d').setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  });
+  drawAll();
+}
+window.addEventListener('resize', resize);
+
+// ── Slider handlers ──
+const lengthSlider = document.getElementById('lengthSlider');
+const supASlider = document.getElementById('supASlider');
+const supBSlider = document.getElementById('supBSlider');
+
+function readSliders() {
+  beamLength = parseFloat(lengthSlider.value);
+  supports[0].x = parseFloat(supASlider.value);
+  supports[1].x = parseFloat(supBSlider.value);
+  document.getElementById('lengthVal').textContent = beamLength.toFixed(1);
+  document.getElementById('supAVal').textContent = supports[0].x.toFixed(1);
+  document.getElementById('supBVal').textContent = supports[1].x.toFixed(1);
+  // Clamp support positions to beam length
+  supASlider.max = beamLength;
+  supBSlider.max = beamLength;
+  if (supports[0].x > beamLength) { supports[0].x = beamLength; supASlider.value = beamLength; }
+  if (supports[1].x > beamLength) { supports[1].x = beamLength; supBSlider.value = beamLength; }
+  recalculate();
+}
+
+[lengthSlider, supASlider, supBSlider].forEach(s => s.addEventListener('input', readSliders));
+
+// ── Support type toggles ──
+function setupToggle(toggleId, supportIndex) {
+  const toggle = document.getElementById(toggleId);
+  toggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      supports[supportIndex].type = btn.dataset.type;
+      recalculate();
+    });
+  });
+}
+setupToggle('supAToggle', 0);
+setupToggle('supBToggle', 1);
+
+// ── FBD toggle ──
+document.getElementById('fbdBtn').addEventListener('click', function() {
+  showFBD = !showFBD;
+  this.textContent = showFBD ? 'Hide FBD' : 'Show FBD';
+  this.classList.toggle('active', showFBD);
+  drawAll();
+});
+// Initialize as active
+document.getElementById('fbdBtn').classList.add('active');
+
+// ── Load management ──
+function buildLoadControls() {
+  const container = document.getElementById('loadControls');
+  container.innerHTML = '';
+  loads.forEach((ld, i) => {
+    const group = document.createElement('div');
+    group.className = 'load-group';
+    if (ld.kind === 'point') {
+      group.innerHTML = `
+        <div class="load-header">
+          <span class="load-title">Point Load ${i + 1}</span>
+          <button class="remove-btn" data-idx="${i}">&times;</button>
+        </div>
+        <div class="slider-group">
+          <label>Position (m) <span class="ld-pos">${ld.x.toFixed(1)}</span></label>
+          <input type="range" class="ld-x" min="0" max="${beamLength}" step="0.1" value="${ld.x}">
+        </div>
+        <div class="slider-group">
+          <label>Force (kN, &darr;) <span class="ld-mag">${ld.magnitude.toFixed(1)}</span></label>
+          <input type="range" class="ld-mag-slider" min="-30" max="0" step="0.5" value="${ld.magnitude}">
+        </div>`;
+    } else {
+      group.innerHTML = `
+        <div class="load-header">
+          <span class="load-title">Distributed Load ${i + 1}</span>
+          <button class="remove-btn" data-idx="${i}">&times;</button>
+        </div>
+        <div class="slider-group">
+          <label>Start (m) <span class="ld-start">${ld.xStart.toFixed(1)}</span></label>
+          <input type="range" class="ld-xs" min="0" max="${beamLength}" step="0.1" value="${ld.xStart}">
+        </div>
+        <div class="slider-group">
+          <label>End (m) <span class="ld-end">${ld.xEnd.toFixed(1)}</span></label>
+          <input type="range" class="ld-xe" min="0" max="${beamLength}" step="0.1" value="${ld.xEnd}">
+        </div>
+        <div class="slider-group">
+          <label>w (kN/m, &darr;) <span class="ld-w">${ld.w.toFixed(1)}</span></label>
+          <input type="range" class="ld-w-slider" min="-20" max="0" step="0.5" value="${ld.w}">
+        </div>`;
+    }
+    container.appendChild(group);
+
+    // Wire events
+    group.querySelector('.remove-btn').addEventListener('click', () => {
+      loads.splice(i, 1);
+      buildLoadControls();
+      recalculate();
+    });
+
+    if (ld.kind === 'point') {
+      const xSlider = group.querySelector('.ld-x');
+      const magSlider = group.querySelector('.ld-mag-slider');
+      xSlider.addEventListener('input', () => {
+        ld.x = parseFloat(xSlider.value);
+        group.querySelector('.ld-pos').textContent = ld.x.toFixed(1);
+        recalculate();
+      });
+      magSlider.addEventListener('input', () => {
+        ld.magnitude = parseFloat(magSlider.value);
+        group.querySelector('.ld-mag').textContent = ld.magnitude.toFixed(1);
+        recalculate();
+      });
+    } else {
+      const xsSlider = group.querySelector('.ld-xs');
+      const xeSlider = group.querySelector('.ld-xe');
+      const wSlider = group.querySelector('.ld-w-slider');
+      xsSlider.addEventListener('input', () => {
+        ld.xStart = parseFloat(xsSlider.value);
+        group.querySelector('.ld-start').textContent = ld.xStart.toFixed(1);
+        recalculate();
+      });
+      xeSlider.addEventListener('input', () => {
+        ld.xEnd = parseFloat(xeSlider.value);
+        group.querySelector('.ld-end').textContent = ld.xEnd.toFixed(1);
+        recalculate();
+      });
+      wSlider.addEventListener('input', () => {
+        ld.w = parseFloat(wSlider.value);
+        group.querySelector('.ld-w').textContent = ld.w.toFixed(1);
+        recalculate();
+      });
+    }
+  });
+
+  // Enable/disable add buttons
+  document.getElementById('addPointBtn').disabled = loads.length >= 4;
+  document.getElementById('addDistBtn').disabled = loads.length >= 4;
+}
+
+document.getElementById('addPointBtn').addEventListener('click', () => {
+  if (loads.length >= 4) return;
+  loads.push({ id: nextLoadId(), kind: 'point', x: beamLength / 2, magnitude: -10.0 });
+  buildLoadControls();
+  recalculate();
+});
+document.getElementById('addDistBtn').addEventListener('click', () => {
+  if (loads.length >= 4) return;
+  loads.push({ id: nextLoadId(), kind: 'distributed', xStart: beamLength * 0.25, xEnd: beamLength * 0.75, w: -5.0 });
+  buildLoadControls();
+  recalculate();
+});
+
+// ── Presets ──
+document.getElementById('presetCantilever').addEventListener('click', () => {
+  beamLength = 6; lengthSlider.value = 6;
+  supports[0].type = 'fixed'; supports[0].x = 0;
+  supports[1].type = 'none'; supports[1].x = 6;
+  setToggle('supAToggle', 'fixed'); setToggle('supBToggle', 'none');
+  supASlider.value = 0; supBSlider.value = 6;
+  loads = [{ id: nextLoadId(), kind: 'point', x: 6.0, magnitude: -10.0 }];
+  buildLoadControls();
+  readSliders();
+});
+document.getElementById('presetSS').addEventListener('click', () => {
+  beamLength = 6; lengthSlider.value = 6;
+  supports[0].type = 'pin'; supports[0].x = 0;
+  supports[1].type = 'roller'; supports[1].x = 6;
+  setToggle('supAToggle', 'pin'); setToggle('supBToggle', 'roller');
+  supASlider.value = 0; supBSlider.value = 6;
+  loads = [{ id: nextLoadId(), kind: 'distributed', xStart: 0, xEnd: 6, w: -5.0 }];
+  buildLoadControls();
+  readSliders();
+});
+document.getElementById('presetOverhang').addEventListener('click', () => {
+  beamLength = 8; lengthSlider.value = 8;
+  supports[0].type = 'pin'; supports[0].x = 1;
+  supports[1].type = 'roller'; supports[1].x = 5;
+  setToggle('supAToggle', 'pin'); setToggle('supBToggle', 'roller');
+  supASlider.value = 1; supBSlider.value = 5;
+  loads = [{ id: nextLoadId(), kind: 'point', x: 8.0, magnitude: -12.0 }];
+  buildLoadControls();
+  readSliders();
+});
+
+function setToggle(toggleId, type) {
+  const toggle = document.getElementById(toggleId);
+  toggle.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === type);
+  });
+}
+
+// ── Reset ──
+document.getElementById('resetBtn').addEventListener('click', () => {
+  beamLength = 6; lengthSlider.value = 6;
+  supports[0] = { id: 'A', type: 'pin', x: 0 };
+  supports[1] = { id: 'B', type: 'roller', x: 6 };
+  setToggle('supAToggle', 'pin'); setToggle('supBToggle', 'roller');
+  supASlider.value = 0; supBSlider.value = 6;
+  loads = [{ id: nextLoadId(), kind: 'point', x: 3.0, magnitude: -10.0 }];
+  buildLoadControls();
+  readSliders();
+});
+
+// ── Validate configuration ──
+function validateConfig() {
+  const tA = supports[0].type;
+  const tB = supports[1].type;
+  configValid = true;
+  configMessage = '';
+
+  // Count reaction unknowns
+  let unknowns = 0;
+  if (tA === 'pin' || tA === 'roller') unknowns += 1;
+  if (tA === 'fixed') unknowns += 2; // force + moment
+  if (tB === 'pin' || tB === 'roller') unknowns += 1;
+  if (tB === 'fixed') unknowns += 2;
+
+  if (unknowns > 2) {
+    configValid = false;
+    configMessage = 'Statically indeterminate (too many supports)';
+  } else if (unknowns < 2) {
+    if (unknowns === 0) {
+      configValid = false;
+      configMessage = 'No supports \u2014 beam is unstable';
+    } else {
+      configValid = false;
+      configMessage = 'Unstable \u2014 need more support reactions';
+    }
+  } else {
+    // Exactly 2 unknowns - but check for valid combos
+    if (tA === 'roller' && tB === 'roller') {
+      // Two rollers: can resist vertical forces but no horizontal (ok for vertical-only loads)
+      // Actually still works for pure vertical loads
+    }
+    if (supports[0].x === supports[1].x && tA !== 'none' && tB !== 'none') {
+      configValid = false;
+      configMessage = 'Supports at same location \u2014 cannot solve moments';
+    }
+  }
+
+  // Special case: fixed + none = cantilever (2 unknowns, valid)
+  // pin + roller = simply supported (2 unknowns, valid)
+
+  const badge = document.getElementById('warningBadge');
+  if (!configValid) {
+    badge.textContent = configMessage;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+  return configValid;
+}
+
+// ── Solve reactions ──
+function solveReactions() {
+  reactions = { RA: 0, RB: 0, MA: 0 };
+  if (!validateConfig()) return;
+
+  const tA = supports[0].type, tB = supports[1].type;
+  const xA = supports[0].x, xB = supports[1].x;
+
+  // Sum total applied forces and moments about A
+  let totalForce = 0, momentAboutA = 0;
+  for (const ld of loads) {
+    if (ld.kind === 'point') {
+      totalForce += ld.magnitude;
+      momentAboutA += ld.magnitude * (ld.x - xA);
+    } else {
+      const a = Math.min(ld.xStart, ld.xEnd);
+      const b = Math.max(ld.xStart, ld.xEnd);
+      const P = ld.w * (b - a);
+      const cx = (a + b) / 2;
+      totalForce += P;
+      momentAboutA += P * (cx - xA);
+    }
+  }
+
+  if ((tA === 'pin' || tA === 'roller') && (tB === 'pin' || tB === 'roller')) {
+    // Simply supported: 2 vertical reactions
+    const span = xB - xA;
+    if (Math.abs(span) < 1e-9) return;
+    reactions.RB = -momentAboutA / span;
+    reactions.RA = -(totalForce + reactions.RB);
+  } else if (tA === 'fixed' && tB === 'none') {
+    // Cantilever fixed at A
+    reactions.RA = -totalForce;
+    reactions.MA = -momentAboutA;
+  } else if (tB === 'fixed' && tA === 'none') {
+    // Cantilever fixed at B
+    let momentAboutB = 0;
+    for (const ld of loads) {
+      if (ld.kind === 'point') {
+        momentAboutB += ld.magnitude * (ld.x - xB);
+      } else {
+        const a = Math.min(ld.xStart, ld.xEnd);
+        const b = Math.max(ld.xStart, ld.xEnd);
+        const P = ld.w * (b - a);
+        momentAboutB += P * ((a + b) / 2 - xB);
+      }
+    }
+    reactions.RB = -totalForce;
+    reactions.MA = -momentAboutB; // store as MB but in MA slot for display
+  }
+}
+
+// ── Compute V(x) and M(x) ──
+function computeVandM() {
+  const N = 500;
+  shearData = [];
+  momentData = [];
+  if (!configValid) return;
+
+  const tA = supports[0].type, tB = supports[1].type;
+  const xA = supports[0].x, xB = supports[1].x;
+
+  for (let i = 0; i <= N; i++) {
+    const x = (i / N) * beamLength;
+    let V = 0, M = 0;
+
+    // Support A contributions
+    if (tA !== 'none' && xA <= x + 1e-9) {
+      V += reactions.RA;
+      M += reactions.RA * (x - xA);
+      if (tA === 'fixed') {
+        M += reactions.MA;
+      }
+    }
+
+    // Support B contributions
+    if (tB !== 'none' && xB <= x + 1e-9) {
+      V += reactions.RB;
+      M += reactions.RB * (x - xB);
+      if (tB === 'fixed') {
+        M += reactions.MA; // MA stores the fixed-end moment for whichever support is fixed
+      }
+    }
+
+    // Applied loads
+    for (const ld of loads) {
+      if (ld.kind === 'point') {
+        if (ld.x <= x + 1e-9) {
+          V += ld.magnitude;
+          M += ld.magnitude * (x - ld.x);
+        }
+      } else {
+        const a = Math.min(ld.xStart, ld.xEnd);
+        const b = Math.max(ld.xStart, ld.xEnd);
+        if (x > a + 1e-9) {
+          const bEff = Math.min(b, x);
+          const len = bEff - a;
+          const force = ld.w * len;
+          V += force;
+          M += force * (x - (a + bEff) / 2);
+        }
+      }
+    }
+
+    shearData.push({ x, V });
+    momentData.push({ x, M });
+  }
+
+  // Find extremes
+  maxShear = { value: 0, x: 0 };
+  maxMoment = { value: 0, x: 0 };
+  for (const pt of shearData) {
+    if (Math.abs(pt.V) > Math.abs(maxShear.value)) {
+      maxShear = { value: pt.V, x: pt.x };
+    }
+  }
+  for (const pt of momentData) {
+    if (Math.abs(pt.M) > Math.abs(maxMoment.value)) {
+      maxMoment = { value: pt.M, x: pt.x };
+    }
+  }
+}
+
+// ── Update metrics display ──
+function updateMetrics() {
+  const fmt = (v) => v.toFixed(2);
+
+  document.getElementById('raVal').textContent =
+    supports[0].type !== 'none' ? fmt(reactions.RA) : '--';
+  document.getElementById('rbVal').textContent =
+    supports[1].type !== 'none' ? fmt(reactions.RB) : '--';
+
+  const hasFixed = supports[0].type === 'fixed' || supports[1].type === 'fixed';
+  document.getElementById('maRow').style.display = hasFixed ? '' : 'none';
+  document.getElementById('maVal').textContent = hasFixed ? fmt(reactions.MA) : '--';
+
+  if (configValid) {
+    // Equilibrium check
+    let sumFy = reactions.RA + reactions.RB;
+    let sumM = reactions.MA;
+    const xRef = supports[0].type !== 'none' ? supports[0].x : supports[1].x;
+    sumM += reactions.RA * (0 - xRef) + reactions.RB * (supports[1].x - xRef);
+    // Actually just recompute properly
+    sumFy = 0; sumM = 0;
+    // All vertical forces
+    if (supports[0].type !== 'none') sumFy += reactions.RA;
+    if (supports[1].type !== 'none') sumFy += reactions.RB;
+    for (const ld of loads) {
+      if (ld.kind === 'point') sumFy += ld.magnitude;
+      else {
+        const a = Math.min(ld.xStart, ld.xEnd), b = Math.max(ld.xStart, ld.xEnd);
+        sumFy += ld.w * (b - a);
+      }
+    }
+    document.getElementById('sumFyVal').textContent = Math.abs(sumFy) < 0.01 ? '0.00' : sumFy.toFixed(3);
+    document.getElementById('sumFyVal').className = 'value' + (Math.abs(sumFy) > 0.1 ? ' danger' : '');
+
+    // Moment equilibrium about A
+    const xA = supports[0].x;
+    sumM = 0;
+    if (supports[0].type === 'fixed') sumM += reactions.MA;
+    if (supports[1].type === 'fixed') sumM += reactions.MA;
+    if (supports[1].type !== 'none') sumM += reactions.RB * (supports[1].x - xA);
+    for (const ld of loads) {
+      if (ld.kind === 'point') sumM += ld.magnitude * (ld.x - xA);
+      else {
+        const a = Math.min(ld.xStart, ld.xEnd), b = Math.max(ld.xStart, ld.xEnd);
+        const P = ld.w * (b - a);
+        sumM += P * ((a + b) / 2 - xA);
+      }
+    }
+    document.getElementById('sumMVal').textContent = Math.abs(sumM) < 0.01 ? '0.00' : sumM.toFixed(3);
+    document.getElementById('sumMVal').className = 'value' + (Math.abs(sumM) > 0.1 ? ' danger' : '');
+
+    document.getElementById('vmaxVal').textContent = fmt(maxShear.value);
+    document.getElementById('mmaxVal').textContent = fmt(maxMoment.value);
+    document.getElementById('mmaxXVal').textContent = fmt(maxMoment.x) + ' m';
+  } else {
+    ['sumFyVal', 'sumMVal', 'vmaxVal', 'mmaxVal', 'mmaxXVal'].forEach(id => {
+      document.getElementById(id).textContent = '--';
+      document.getElementById(id).className = 'value';
+    });
+  }
+}
+
+// ── Master recalculate ──
+function recalculate() {
+  solveReactions();
+  computeVandM();
+  updateMetrics();
+  drawAll();
+}
+
+// ── Drawing helpers ──
+function getBeamCoords(canvas) {
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  const pad = { left: 50, right: 30, top: 40, bottom: 50 };
+  const drawW = W - pad.left - pad.right;
+  const scale = drawW / beamLength;
+  const toX = (bx) => pad.left + bx * scale;
+  const beamY = H / 2;
+  return { W, H, pad, scale, toX, beamY };
+}
+
+// ── Draw beam diagram ──
+function drawBeam() {
+  const W = beamCanvas.clientWidth, H = beamCanvas.clientHeight;
+  const ctx = beamCtx;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  const { pad, scale, toX, beamY } = getBeamCoords(beamCanvas);
+
+  // Grid lines at 1m intervals
+  ctx.strokeStyle = '#151f30';
+  ctx.lineWidth = 1;
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = '#3a5570';
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= beamLength; d += 1) {
+    const x = toX(d);
+    ctx.beginPath(); ctx.moveTo(x, pad.top - 10); ctx.lineTo(x, H - pad.bottom + 10); ctx.stroke();
+    ctx.fillText(d + 'm', x, H - pad.bottom + 24);
+  }
+
+  // Beam member
+  ctx.strokeStyle = '#7ec8f0';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(toX(0), beamY);
+  ctx.lineTo(toX(beamLength), beamY);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  // Draw supports
+  supports.forEach(s => {
+    if (s.type === 'none') return;
+    const sx = toX(s.x);
+    drawSupport(ctx, sx, beamY, s.type, s.x === 0 ? 'left' : 'right');
+  });
+
+  // Draw applied loads
+  for (const ld of loads) {
+    if (ld.kind === 'point') {
+      drawPointLoad(ctx, toX(ld.x), beamY, ld.magnitude, '#e07050');
+    } else {
+      drawDistributedLoad(ctx, toX, beamY, ld, '#e07050');
+    }
+  }
+
+  // Draw reaction forces (FBD)
+  if (showFBD && configValid) {
+    if (supports[0].type !== 'none' && Math.abs(reactions.RA) > 0.01) {
+      drawReactionArrow(ctx, toX(supports[0].x), beamY, reactions.RA, '#50d080',
+        'R_A=' + reactions.RA.toFixed(1));
+    }
+    if (supports[1].type !== 'none' && Math.abs(reactions.RB) > 0.01) {
+      drawReactionArrow(ctx, toX(supports[1].x), beamY, reactions.RB, '#50d080',
+        'R_B=' + reactions.RB.toFixed(1));
+    }
+    if ((supports[0].type === 'fixed' || supports[1].type === 'fixed') && Math.abs(reactions.MA) > 0.01) {
+      const fixedSup = supports[0].type === 'fixed' ? supports[0] : supports[1];
+      drawMomentArc(ctx, toX(fixedSup.x), beamY, reactions.MA, '#50d080');
+    }
+  }
+
+  // Hover crosshair
+  if (hoveredX !== null && hoveredX >= 0 && hoveredX <= beamLength) {
+    const hx = toX(hoveredX);
+    ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(hx, pad.top - 10); ctx.lineTo(hx, H - pad.bottom + 10); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawSupport(ctx, x, y, type, side) {
+  const s = 12;
+  ctx.strokeStyle = '#40a070';
+  ctx.fillStyle = 'rgba(64,160,112,0.15)';
+  ctx.lineWidth = 2;
+
+  if (type === 'pin') {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - s, y + s * 1.5);
+    ctx.lineTo(x + s, y + s * 1.5);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Ground line
+    ctx.beginPath();
+    ctx.moveTo(x - s - 4, y + s * 1.5 + 4);
+    ctx.lineTo(x + s + 4, y + s * 1.5 + 4);
+    ctx.stroke();
+    // Hatching
+    for (let i = -s; i <= s; i += 6) {
+      ctx.beginPath();
+      ctx.moveTo(x + i, y + s * 1.5 + 4);
+      ctx.lineTo(x + i - 5, y + s * 1.5 + 10);
+      ctx.stroke();
+    }
+  } else if (type === 'roller') {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - s, y + s * 1.3);
+    ctx.lineTo(x + s, y + s * 1.3);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Wheel
+    ctx.beginPath();
+    ctx.arc(x, y + s * 1.3 + 6, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    // Ground line
+    ctx.beginPath();
+    ctx.moveTo(x - s - 4, y + s * 1.3 + 12);
+    ctx.lineTo(x + s + 4, y + s * 1.3 + 12);
+    ctx.stroke();
+  } else if (type === 'fixed') {
+    const wallH = 40;
+    const dir = side === 'left' ? -1 : 1;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, y - wallH / 2);
+    ctx.lineTo(x, y + wallH / 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    for (let i = -wallH / 2; i <= wallH / 2; i += 7) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + i);
+      ctx.lineTo(x + dir * (-10), y + i + 5);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawPointLoad(ctx, x, beamY, mag, color) {
+  const arrowLen = Math.min(Math.abs(mag) * 4, 60);
+  const dir = mag < 0 ? 1 : -1; // positive = up, negative = down visually
+  const startY = beamY - dir * arrowLen;
+  const endY = beamY;
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, startY);
+  ctx.lineTo(x, endY);
+  ctx.stroke();
+
+  // Arrowhead
+  ctx.beginPath();
+  ctx.moveTo(x, endY);
+  ctx.lineTo(x - 5, endY - dir * 10);
+  ctx.lineTo(x + 5, endY - dir * 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Label
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(Math.abs(mag).toFixed(1) + ' kN', x, startY - dir * 6);
+}
+
+function drawDistributedLoad(ctx, toX, beamY, ld, color) {
+  const a = Math.min(ld.xStart, ld.xEnd);
+  const b = Math.max(ld.xStart, ld.xEnd);
+  const arrowH = Math.min(Math.abs(ld.w) * 4, 50);
+  const dir = ld.w < 0 ? 1 : -1;
+  const nArrows = Math.max(3, Math.round((b - a) * 3));
+  const startY = beamY - dir * arrowH;
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color + '40';
+  ctx.lineWidth = 1.5;
+
+  // Filled region
+  ctx.beginPath();
+  ctx.moveTo(toX(a), beamY);
+  ctx.lineTo(toX(a), startY);
+  ctx.lineTo(toX(b), startY);
+  ctx.lineTo(toX(b), beamY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Top line
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(toX(a), startY);
+  ctx.lineTo(toX(b), startY);
+  ctx.stroke();
+
+  // Arrows
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < nArrows; i++) {
+    const xPos = a + (b - a) * (i + 0.5) / nArrows;
+    const ax = toX(xPos);
+    ctx.beginPath();
+    ctx.moveTo(ax, startY);
+    ctx.lineTo(ax, beamY);
+    ctx.stroke();
+    // Small arrowhead
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(ax, beamY);
+    ctx.lineTo(ax - 3, beamY - dir * 7);
+    ctx.lineTo(ax + 3, beamY - dir * 7);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Label
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = color;
+  ctx.fillText(Math.abs(ld.w).toFixed(1) + ' kN/m', toX((a + b) / 2), startY - dir * 6);
+}
+
+function drawReactionArrow(ctx, x, beamY, mag, color, label) {
+  const arrowLen = Math.min(Math.abs(mag) * 3.5, 55);
+  const dir = mag > 0 ? -1 : 1; // reaction up = arrow pointing up
+  const startY = beamY + dir * arrowLen + dir * 25;
+  const endY = beamY + dir * 5;
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, startY);
+  ctx.lineTo(x, endY);
+  ctx.stroke();
+
+  // Arrowhead pointing at beam
+  ctx.beginPath();
+  ctx.moveTo(x, endY);
+  ctx.lineTo(x - 5, endY + dir * 10);
+  ctx.lineTo(x + 5, endY + dir * 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Label
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x, startY + dir * 12);
+}
+
+function drawMomentArc(ctx, x, beamY, moment, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  const r = 20;
+  const startAngle = moment > 0 ? -Math.PI * 0.7 : Math.PI * 0.3;
+  const endAngle = moment > 0 ? Math.PI * 0.3 : -Math.PI * 0.7;
+  const ccw = moment < 0;
+
+  ctx.beginPath();
+  ctx.arc(x, beamY - 30, r, startAngle, endAngle, ccw);
+  ctx.stroke();
+
+  // Arrowhead at end
+  const tipX = x + r * Math.cos(endAngle);
+  const tipY = beamY - 30 + r * Math.sin(endAngle);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('M=' + moment.toFixed(1), x, beamY - 55);
+}
+
+// ── Draw shear diagram ──
+function drawShearDiagram() {
+  const W = shearCanvas.clientWidth, H = shearCanvas.clientHeight;
+  const ctx = shearCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!configValid || shearData.length < 2) return;
+
+  const pad = { left: 50, right: 30, top: 15, bottom: 25 };
+  const pw = W - pad.left - pad.right;
+  const ph = H - pad.top - pad.bottom;
+  const scale = pw / beamLength;
+  const toX = (bx) => pad.left + bx * (pw / beamLength);
+
+  // Find V range
+  let vMin = 0, vMax = 0;
+  for (const pt of shearData) {
+    if (pt.V < vMin) vMin = pt.V;
+    if (pt.V > vMax) vMax = pt.V;
+  }
+  const vRange = Math.max(vMax - vMin, 1);
+  const vPad = vRange * 0.15;
+  vMin -= vPad; vMax += vPad;
+  const toY = (v) => pad.top + ph - ((v - vMin) / (vMax - vMin)) * ph;
+  const zeroY = toY(0);
+
+  // Grid
+  ctx.strokeStyle = '#151f30';
+  ctx.lineWidth = 1;
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#3a5570';
+  // X grid
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= beamLength; d += 1) {
+    const x = toX(d);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+  }
+  // Y grid
+  ctx.textAlign = 'right';
+  const vStep = niceStep(vMax - vMin);
+  for (let v = Math.ceil(vMin / vStep) * vStep; v <= vMax; v += vStep) {
+    const y = toY(v);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillText(v.toFixed(1), pad.left - 6, y + 3);
+  }
+
+  // Zero axis
+  ctx.strokeStyle = '#2a4060';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(W - pad.right, zeroY); ctx.stroke();
+
+  // Filled shear diagram
+  ctx.beginPath();
+  ctx.moveTo(toX(shearData[0].x), zeroY);
+  for (const pt of shearData) {
+    ctx.lineTo(toX(pt.x), toY(pt.V));
+  }
+  ctx.lineTo(toX(shearData[shearData.length - 1].x), zeroY);
+  ctx.closePath();
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  grad.addColorStop(0, 'rgba(74,192,240,0.25)');
+  grad.addColorStop(0.5, 'rgba(74,192,240,0.05)');
+  grad.addColorStop(1, 'rgba(240,160,80,0.25)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Stroke V(x) curve
+  ctx.strokeStyle = '#4ac0f0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < shearData.length; i++) {
+    const x = toX(shearData[i].x);
+    const y = toY(shearData[i].V);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Hover crosshair on shear
+  if (hoveredX !== null) {
+    const hx = toX(hoveredX);
+    ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(hx, pad.top); ctx.lineTo(hx, H - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Find V at hoveredX
+    const idx = Math.round((hoveredX / beamLength) * (shearData.length - 1));
+    if (idx >= 0 && idx < shearData.length) {
+      const v = shearData[idx].V;
+      const hy = toY(v);
+      ctx.fillStyle = '#4ac0f0';
+      ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+// ── Draw moment diagram ──
+function drawMomentDiagram() {
+  const W = momentCanvas.clientWidth, H = momentCanvas.clientHeight;
+  const ctx = momentCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a1220';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!configValid || momentData.length < 2) return;
+
+  const pad = { left: 50, right: 30, top: 15, bottom: 25 };
+  const pw = W - pad.left - pad.right;
+  const ph = H - pad.top - pad.bottom;
+  const toX = (bx) => pad.left + bx * (pw / beamLength);
+
+  // Find M range
+  let mMin = 0, mMax = 0;
+  for (const pt of momentData) {
+    if (pt.M < mMin) mMin = pt.M;
+    if (pt.M > mMax) mMax = pt.M;
+  }
+  const mRange = Math.max(mMax - mMin, 1);
+  const mPad = mRange * 0.15;
+  mMin -= mPad; mMax += mPad;
+  const toY = (m) => pad.top + ph - ((m - mMin) / (mMax - mMin)) * ph;
+  const zeroY = toY(0);
+
+  // Grid
+  ctx.strokeStyle = '#151f30';
+  ctx.lineWidth = 1;
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#3a5570';
+  ctx.textAlign = 'center';
+  for (let d = 0; d <= beamLength; d += 1) {
+    const x = toX(d);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+  }
+  ctx.textAlign = 'right';
+  const mStep = niceStep(mMax - mMin);
+  for (let m = Math.ceil(mMin / mStep) * mStep; m <= mMax; m += mStep) {
+    const y = toY(m);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillText(m.toFixed(1), pad.left - 6, y + 3);
+  }
+
+  // Zero axis
+  ctx.strokeStyle = '#2a4060';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(W - pad.right, zeroY); ctx.stroke();
+
+  // Filled moment diagram
+  ctx.beginPath();
+  ctx.moveTo(toX(momentData[0].x), zeroY);
+  for (const pt of momentData) {
+    ctx.lineTo(toX(pt.x), toY(pt.M));
+  }
+  ctx.lineTo(toX(momentData[momentData.length - 1].x), zeroY);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  grad.addColorStop(0, 'rgba(74,192,240,0.25)');
+  grad.addColorStop(0.5, 'rgba(74,192,240,0.05)');
+  grad.addColorStop(1, 'rgba(240,160,80,0.25)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Stroke M(x) curve
+  ctx.strokeStyle = '#f0a050';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < momentData.length; i++) {
+    const x = toX(momentData[i].x);
+    const y = toY(momentData[i].M);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Max moment marker
+  if (Math.abs(maxMoment.value) > 0.01) {
+    const mx = toX(maxMoment.x);
+    const my = toY(maxMoment.value);
+    ctx.fillStyle = '#f0a050';
+    ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('M=' + maxMoment.value.toFixed(1), mx, my - 10);
+  }
+
+  // Hover crosshair
+  if (hoveredX !== null) {
+    const hx = toX(hoveredX);
+    ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(hx, pad.top); ctx.lineTo(hx, H - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const idx = Math.round((hoveredX / beamLength) * (momentData.length - 1));
+    if (idx >= 0 && idx < momentData.length) {
+      const m = momentData[idx].M;
+      const hy = toY(m);
+      ctx.fillStyle = '#f0a050';
+      ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+function niceStep(range) {
+  const rough = range / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  if (norm < 1.5) return mag;
+  if (norm < 3.5) return 2 * mag;
+  if (norm < 7.5) return 5 * mag;
+  return 10 * mag;
+}
+
+// ── Draw all ──
+function drawAll() {
+  drawBeam();
+  drawShearDiagram();
+  drawMomentDiagram();
+}
+
+// ── Mouse interaction: hover ──
+beamCanvas.addEventListener('mousemove', (e) => {
+  const rect = beamCanvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const { pad, scale, toX } = getBeamCoords(beamCanvas);
+  const bx = (mouseX - pad.left) / scale;
+
+  if (dragState) {
+    handleDrag(bx);
+    return;
+  }
+
+  if (bx >= 0 && bx <= beamLength) {
+    hoveredX = bx;
+
+    // Update tooltip
+    const idx = Math.round((bx / beamLength) * (shearData.length - 1));
+    if (idx >= 0 && idx < shearData.length && configValid) {
+      const V = shearData[idx].V;
+      const M = momentData[idx].M;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (mouseX + 12) + 'px';
+      tooltip.style.top = (mouseY - 30) + 'px';
+      tooltip.innerHTML = `x=${bx.toFixed(2)}m V=${V.toFixed(2)}kN M=${M.toFixed(2)}kN\u00b7m`;
+    }
+  } else {
+    hoveredX = null;
+    tooltip.style.display = 'none';
+  }
+  drawAll();
+});
+
+beamCanvas.addEventListener('mouseleave', () => {
+  if (dragState) endDrag();
+  hoveredX = null;
+  tooltip.style.display = 'none';
+  drawAll();
+});
+
+// ── Mouse interaction: drag ──
+beamCanvas.addEventListener('mousedown', (e) => {
+  const rect = beamCanvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const { pad, scale } = getBeamCoords(beamCanvas);
+  const bx = (mouseX - pad.left) / scale;
+  const hitR = 15 / scale; // hit radius in beam coords
+
+  // Check supports
+  for (const s of supports) {
+    if (s.type !== 'none' && Math.abs(bx - s.x) < hitR) {
+      dragState = { type: 'support', target: s };
+      beamCanvas.style.cursor = 'grabbing';
+      return;
+    }
+  }
+  // Check point loads
+  for (const ld of loads) {
+    if (ld.kind === 'point' && Math.abs(bx - ld.x) < hitR) {
+      dragState = { type: 'load', target: ld };
+      beamCanvas.style.cursor = 'grabbing';
+      return;
+    }
+  }
+});
+
+function handleDrag(bx) {
+  if (!dragState) return;
+  const clamped = Math.max(0, Math.min(beamLength, Math.round(bx * 10) / 10));
+
+  if (dragState.type === 'support') {
+    dragState.target.x = clamped;
+    // Sync slider
+    if (dragState.target.id === 'A') {
+      supASlider.value = clamped;
+      document.getElementById('supAVal').textContent = clamped.toFixed(1);
+    } else {
+      supBSlider.value = clamped;
+      document.getElementById('supBVal').textContent = clamped.toFixed(1);
+    }
+  } else if (dragState.type === 'load') {
+    dragState.target.x = clamped;
+    buildLoadControls(); // sync sliders
+  }
+  recalculate();
+}
+
+function endDrag() {
+  dragState = null;
+  beamCanvas.style.cursor = 'crosshair';
+}
+
+beamCanvas.addEventListener('mouseup', endDrag);
+
+// ── Initialize ──
+buildLoadControls();
+resize();
+recalculate();
+</script>
+</body>
+</html>
